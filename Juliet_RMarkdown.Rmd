@@ -1,0 +1,362 @@
+---
+title: "Predicting District School Funding and Educational Outcomes"
+author: "Team Po-Data Science: Amy Luo, Austin Tucker, Han Choi, Juliet McCann, Yeeun Lee"
+date: "December 2021"
+output:
+  html_document:
+    theme:
+      bootswatch: 'cosmo'
+    df_print: paged
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r include=FALSE}
+#loading all necessary R Packages
+library(haven)
+library(dplyr)
+library(missForest)
+library(caret)
+library(kableExtra)
+library(rpart)
+library(rpart.plot)
+library(tree)
+library(MASS)
+library(caret)
+library(tidyverse)
+library(ggpubr)
+```
+
+# 
+
+## Overview and Motivation
+*Provide an overview of the project goals and the motivation for it. Consider that this will be read by people who did not see your project proposal.*
+
+
+## Related Work
+*Anything that inspired you, such as a paper, a web site, or something we discussed in class.*
+
+## Initial Questions
+*What questions are you trying to answer? How did these questions evolve over the course of the project? What new questions did you consider in the course of your analysis?*
+
+
+## Part 1: Predicting District Academic Achievement
+
+In the first part of our project, we aim to understand the variables that predict academic achievement on a district level. This section of our project has three components. First, we will use explortory data analysis and machine learning modeling to determine key predictors of academic achievment on which to focus. Next we will take a closer look at some socio-economic status, unemployment, and poverty as predictors of academic achievement, using Washington and Massachusetts as case studies. Finally, we will explore how receiving free lunch at school predicts academic success. 
+
+
+### Data Source:
+
+Data for this portion of the project is obtained from the Stanford
+
+**this still needs to be done-- describing the data source**
+
+```{r}
+# Load achievement data (district, CS, pooled) 
+# data obtained from: "https://stacks.stanford.edu/file/druid:db586ns4974/seda_geodist_pool_cs_4.0.dta"
+# This data set contains data on the outcome of interest, district academic achievement.
+# In this data set, academic achievement is measured in terms of standard deviation 
+# units and is what we will be using for our regression analyses
+ach <- read_dta("seda_geodist_pool_cs_4.0.dta")  
+
+# Load main covariates data (district level), pool 
+# data obtained from https://stacks.stanford.edu/file/druid:db586ns4974/district%20covariates.dta"
+# This data set contains an extensive list of covariates that will be tested as
+# predictors of our outcome, academic achievement
+covs <- read_dta("seda_cov_geodist_pool_4.0.dta")
+
+
+# Merge files together. This keeps only matched districts.
+dat <- inner_join(ach, covs, by = c("sedalea", "fips"))
+
+
+# Subset to the "all" subgroup estimates for all students, only districts
+# with an estimate of average achievement, unemployment, poverty, ses avergage, and non-missing SES.
+dat <- filter(dat,
+              subgroup == "all",
+              !is.na(cs_mn_avg_ol),
+              !is.na(unempavgall),
+              !is.na(povertyavgall),
+              !is.na(sesavgall))
+nrow(dat)
+
+
+```
+
+After creating this data set, we noticed that the covariate data set that we used did not include variables related to district spending. This is an area of interest of our team, as it shows how policies and funding can play a round in academic outcomes. Therefore, obtained an additional SEDA dataset with district spending included and merged this with the data set above. 
+
+
+```{r}
+
+#importing the data set that includes variables of interest: ppexp_tot, ppexp_inst, pprev_tot
+spending <- read_dta("district covariates.dta")  
+
+# Subsetting data set to only include variables of interest
+# also including the district ID, titled leaid here, and state ID (fips) for joining
+spending <- subset(spending, select = c(ppexp_tot, ppexp_inst, pprev_tot, leaid, fips))
+
+# since the name of the district ID variable in the dataset "spending" (leaid) is different
+# from the district ID variable in the data set "dat" (sedalea), we need to change this
+
+spending <- rename(spending, sedalea = leaid)
+
+#checking the class of `sedalea` in "spending" df 
+class(spending$sedalea)
+
+#checking the class of `sedalea` in "dat" df
+
+class(dat$sedalea)
+
+#converting `sedalea` in "spending" df to numeric class so that they are both of the same class
+spending$sedalea <- as.numeric(spending$sedalea)
+
+#confirming that `sedalea` in "spending" is now numeric
+class(spending$sedalea)
+
+# Merge files together. This keeps only matched districts.
+dat <- inner_join(dat, spending, by = c("sedalea", "fips"))
+```
+
+
+### Part 1a: Deciding the predictors of interest
+
+### Explorotory Analysis
+
+For the exploratory data analysis, we start by summarizing our outcome of interest: district academic achievement. As mentioned in the code above, the data set that we imported for our measures academic achievement in terms of standard deviation units away form the national mean. While we can compare relative performance using this measure, interpreting standard deviation units for exploratory data analysis is not too useful, and can be difficult to interpret. Therefore, we will import another SEDA dataset that measures academic achievement outcomes in terms of "grade levels" using the variable `gcs_mn_avg_ol.`
+
+As with `cs_mn_avg_ol`, this variable indicates the average math and reading scores for grades 3  through 9 from academic years 2008-2009 to 2015-2016. This scale, however, is in "grade levles" where 5.5 is average across all districts (mid point of grades 3 and 8, the grades that participate in testing). Using this scale means that if a district has an average grade level of 7.5, their students math and reading scores are, on average, similar to students who are one grade level higher, when compared to an average district in the nation. 
+
+
+```{r}
+# loading SEDA data that includes academic achievement in "grade levels"
+
+ach.EDA <- read_dta("seda_geodist_pool_gcs_4.0.dta")  
+
+# Restricting the data set to only observations in the subgroup "all" and that does not have missing values for gcs_mn_avg_ol
+ach.EDA <- filter(ach.EDA,
+              subgroup == "all",
+              !is.na(gcs_mn_avg_ol))
+
+```
+
+To begin our exploratory data analysis on our outcome, it would be helpful to first take a look at how much variation we have in our data. We can visualize this first by using a histogram.
+
+```{r}
+# Creating a histogram of district academic achievement as measured by average "grade levels"ggplot(aes(x=gcs_mn_avg_ol), data = ach.EDA) +
+ggplot(aes(x=gcs_mn_avg_ol), data = ach.EDA) +
+  geom_histogram(color="black", fill="#99CCFF") +
+  xlab("Average Test Scores (Grade Levels)") +
+  ylab("Frequency")
+
+```
+
+From the histogram above, we see that there is decent amount of variation in the district average achievement scores, as measured in "Grade Levels." For example, some districts have average test scores of around 2.5-- that means that district is testing 3 grade levels below the national average of 5.5! On the other hand, there are also some very high achieving districts. For example, some districts have average test scores at around 7.5 grade levels, 2.5 grade levels above the national average. 
+
+Our team is hoping to understand some of the district-level factors that leads to such variation in academic performance in the United States. 
+
+Before moving onto our analysis, we can also look at the variation in test scores between and within states using box plots:
+
+```{r}
+
+ach.EDA %>% mutate(stateabb = reorder(stateabb, gcs_mn_avg_ol, FUN = median)) %>% 
+  ggplot(aes(stateabb, gcs_mn_avg_ol, group = stateabb)) + 
+  geom_boxplot(fill = "#99CCFF") +
+  labs(x = "State Abbreviation", y = "Average District Test Scores (Grade Levels)") + theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
+
+
+
+```
+
+From the graph above, we notice there is a lot of variation in test scores both between and within states. Districts in Massachusetts have the highest median test score, performing at about 1.5 grade levels above the national average while New Mexico has the lowest median achievement scores with a median of around 0.5 grade levels below the national average. With that being said, within most states there is a lot of variation in performance. Within a given state, take California for example, you can find districts with both extremely high and extremely low test scores.
+
+In our analysis, we hope to understand the factors that contribute to such variation between districts across the United States. The covariate data set has many different variables, many of which may predict district test scores. However, for the purpose of our project, we want to focus in on a few key covariates in order to produce more focused and meaningful conclusions.
+
+To decide our priority predictors, we can start of by visually summarizing the overall relationships between these variables and our outcome for academic achievement, `cs_mn_avg_ol`. In contrast our achievement variable used in the plots above, `cs_mn_avg_ol` measures academic achievement in terms of standard deviations away from the national average. 
+
+
+Before we begin, we need to specify our list of district-level predictors to choose from. Our current data set currently has approximately 60 covariates. However, some of these covariates are only applicable to some sub-populations. For example, for average SES, the data set includes a district-level measure and a measure broken down into different racial groups. For this project, we are only interested in the district-level measures. 
+
+Our final list of covariates that we will be analyzing is presented below:
+
+
+```{r}
+dat.ML <- subset(dat, select = c(urban, suburb, town, rural, perind, perasn, perhsp, perblk, perwht, perfl, perrl, perfrl, perecd, perell, perspeced, totenrl, gslo, gshi, sesavgall, lninc50avgall, baplusavgall, povertyavgall, unempavgall, snapavgall,  single_momavgall, ppexp_tot, ppexp_inst, pprev_tot, cs_mn_avg_ol))
+
+```
+
+```{r}
+#running missForest to impute missing data
+#data.ML.imputed <- missForest(as.matrix(dat.ML))
+
+#converting output back to data frame to be used
+#data.ML.imputed.df <- as.data.frame(data.ML.imputed$ximp)
+
+#exporting the data frame with imputed values to be used in the future
+#write.csv(data.ML.imputed.df, file = "data_ML_imputed.csv", row.names = FALSE)
+
+```
+
+- `urban`: district is in a city/urban locale (binary; 0 = no, 1 = yes)
+- `suburb`: district is in a suburban locale (binary; 0 = no, 1 = yes)
+- `town`: district is in a town locale (binary; 0 = no, 1 = yes)
+- `rural`: district is in a rural locale (binary; 0 = no, 1 = yes)
+- `perind`: % Native American students in the district
+- `perasn`: % Asian students in the district
+- `perhsp`: % Hispanic students in the district
+- `perblk`: % Black students in the district
+- `perwht`: % White Students in the district
+- `perfl`: % students receiving free lunch
+- `perrl`: % students receiving reduced lunch
+- `perfrl`: % students receiving free or reduced lunch
+- `perecd`: % economically disadvantaged students in the district
+- `perell`: % English Language Learners
+- `perspeced`: % students who receive Special Education
+- `totenrl`: # students in the grade 
+- `sesavgall`: SES composite score 
+- `lninc50all`: log of median income
+- `baplusall`: % of adults in district with at least a bachelors degree (percentage)
+- `povertyall`: poverty rate (%)
+- `unempall`: unemployment rate (%)
+- `snapall`: SNAP recipient rate (%)
+- `single_momall`: % of household with children with single mom
+- `ppexp_tot`: revenue per pupil (dollars)
+- `ppexp_inst`: total per pupil expenditures on instruction (dollars)
+- `pprev_tot`: revenue per pupil (dollars)
+- `cs_mn_avg_ol`: District test-based achievement math and reading scores from ordinary least squares estimate
+
+For the continuous predictors, we can do scatter plots:
+```{r}
+ML.dta <- read.csv("data_ML_imputed.csv")
+
+ML.dta %>% 
+  gather(predictor, value, c(perind, perasn, perhsp, perblk, perwht, perfl, perrl, perfrl, perecd, perell, perspeced, totenrl, sesavgall, lninc50avgall,baplusavgall, povertyavgall, unempavgall, snapavgall, single_momavgall, ppexp_tot, ppexp_inst, pprev_tot)) %>% 
+  ggplot(aes(x = value, y = cs_mn_avg_ol)) + 
+  geom_point(size=0.05, shape = ".", alpha = 0.05) +
+  facet_wrap(~ predictor, scales = "free_x", ncol=5,
+             labeller = 
+               as_labeller(c("perind" = "% Native American",
+                             "perasn"= "% Asian students",
+                             "perhsp"= "% Hispanic students",
+                             "perblk"= "% Black students",
+                             "perwht"= "% White students",
+                             "perfl"= "% w/ Free lnch",
+                             "perrl"= "% w/ Reduced lnch",
+                             "perfrl"= "% Free/reduced lnch",
+                             "perecd"= "% Econ. disadvntgd",
+                             "perell"= "% English Learners",
+                             "perspeced"= "% w/ Special Ed.",
+                             "totenrl"= "# students", 
+                             "sesavgall"= "SES score", 
+                             "lninc50avgall"= "Log  median income",
+                             "baplusavgall"= "% w/ BA degree", 
+                             "povertyavgall"= "Poverty rate (%)",
+                             "unempavgall"= "Unemployment (%)",
+                             "snapavgall"= "SNAP rate (%)",
+                             "single_momavgall" = "% w/ Single mom",
+                             "ppexp_tot" = "Revenue PP (USD)",
+                             "ppexp_inst" = "Instuction expenditures (USD)",
+                             "pprev_tot"= "Revenue per pupil (USD)"))) + 
+  xlab(NULL) + ylab("District Achievement Scores")
+
+preds = c("perind" = "% Native American",
+                             "perasn"= "% Asian students",
+                             "perhsp"= "% Hispanic students",
+                             "perblk"= "% Black students",
+                             "perwht"= "% White students",
+                             "perfl"= "% w/ Free lnch",
+                             "perrl"= "% w/ Reduced lnch",
+                             "perfrl"= "% Free/reduced lnch",
+                             "perecd"= "% Econ. disadvntgd",
+                             "perell"= "% English Learners",
+                             "perspeced"= "% w/ Special Ed.",
+                             "totenrl"= "# students", 
+                             "sesavgall"= "SES score", 
+                             "lninc50avgall"= "Log  median income",
+                             "baplusavgall"= "% w/ BA degree", 
+                             "povertyavgall"= "Poverty rate (%)",
+                             "unempavgall"= "Unemployment (%)",
+                             "snapavgall"= "SNAP rate (%)",
+                             "single_momavgall" = "% w/ Single mom",
+                             "ppexp_tot" = "Expenditure PP (USD)",
+                             "ppexp_inst" = "Instuction expenditures (USD)",
+                             "pprev_tot"= "Revenue per pupil (USD)")
+
+p = list()
+for(i in 1:length(preds)) {
+   p[[i]] = ggplot(ML.dta, aes_string(x = names(preds)[i], y = "cs_mn_avg_ol")) + 
+  geom_point(size=0.05, shape = ".", alpha = 0.5) + 
+  xlab(preds[i]) + ylab("District Achievement Scores") + theme_light()
+}
+
+#for(i in 1:length(preds)) {
+#   print(p[[i]])
+#}
+    
+            
+ggarrange(plotlist=p, ncol = 2)      
+
+```
+For the binary predictor (`urban` gslo, gshi, urban, suburb, town, rural), we can use a box plot:
+
+```{r}
+
+```
+
+Our above scatter plots confirm what we initially suspected: many of these variables do in fact predict academic achievement. For example, it appears `baplus_all`, the percent of adults in the district with a bachelor's degree, is positively correlated with academic achievement. On the other hand, the percent of households in poverty or with a single mother appear to be negatively correlated. For other variables, such as per pupil expenditure (`ppexpt_inst`), the association is less clear. Overall, while these scatterplots give us a general sense of what variables may be important, it still is not clear which variables matter the most for academic achievement.
+
+To answer this question, we will turn to machine learning models. We will first use random forest to determine variables of importance in predicting academic achievement, as measured by the Gini coeffient. We will then addition use a regression tree to see which variables are included to predict relative test scores. 
+
+## Using Machine Learning to Determine Predictors of Importance
+### Creating the Training and Test Sets
+To begin our machine learning exercises, we first must great our training and test sets. Here we are using training and test sets that both include 50% of the dataset.
+```{r}
+#creating a data partition that splits my data frame in half
+index_train<- createDataPartition(y = ML.dta$cs_mn_avg_ol, times =1, p=0.05, list = FALSE)
+
+#labeling the first "slice" as the train set
+train_set <- slice(ML.dta, index_train)
+
+#labelign the second "slice" as the test set
+test_set <- slice(ML.dta, -index_train)
+```
+
+
+### Random Forest
+Next, we will use a Random Forest Model to determine variables of importance, as measured using the Gini Coefficient. 
+
+
+```{r}
+set.seed(1)
+
+#fitting a random forest with all 22 predictors
+rf_fit <- randomForest(cs_mn_avg_ol ~ urban + suburb + town + rural + perind + 
+                                 perasn + perhsp + perblk + perwht + 
+                                 perfl + perrl + perfrl + perecd + perell +
+                                 perspeced + totenrl + gslo + gshi +
+                                 sesavgall + lninc50avgall +
+                                 baplusavgall + povertyavgall +
+                                 unempavgall + snapavgall +
+                                 single_momavgall + ppexp_tot +
+                                 ppexp_inst + pprev_tot, data = train_set, mtry = 28, importance = TRUE)
+
+
+variable_importance <- importance(rf_fit)
+
+variable_importance_death <- tibble(Predictor = rownames(variable_importance),
+                  Gini = variable_importance[,1]) %>%
+                  arrange(desc(Gini))
+
+kable(variable_importance_death[1:22,])
+
+
+```
+
+From the above outputs we can see two things. First, our random forest model is fairly accurate at predicting test scores with an accuracy of 80.47%. Second, as measured by the Gini coefficient, percent free lunch is the most important predictor of test scores followed by percent of adults who have their bachelors degree. Other important indicators include socio-economic status and poverty. 
+
+
+So based on these analyses, what predictors should we focus on? It is clear from the random forest and the regression tree models that some variables are more important for academic success than others. For example, percent of students receiving free lunch has high priority in both the random forest model and the regression tree models so warrants attention in future analyses. We additionally want to balance the outcomes of this exploratory data analysis with the interests of our team members. For example, socio-economic status and related predictors, such as poverty, are often described as strong predictors of academic success (*source?*). Therefore, it would also be worthwhile to explore these variable further and the nature of their associations with academic achievment outcomes. 
+
+**feel free to add to or change any of the above to make the transition smoother**
