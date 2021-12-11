@@ -28,6 +28,7 @@ library(MASS)
 library(caret)
 library(tidyverse)
 library(stargazer)
+library(ggpubr)
 ```
 
 
@@ -134,6 +135,7 @@ As with `cs_mn_avg_ol`, this variable indicates the average math and reading sco
 
 ach.EDA <- read_dta("seda_geodist_pool_gcs_4.0.dta")  
 
+# Restricting the data set to only observations in the subgroup "all" and that does not have missing values for gcs_mn_avg_ol
 ach.EDA <- filter(ach.EDA,
               subgroup == "all",
               !is.na(gcs_mn_avg_ol))
@@ -143,9 +145,9 @@ ach.EDA <- filter(ach.EDA,
 To begin our exploratory data analysis on our outcome, it would be helpful to first take a look at how much variation we have in our data. We can visualize this first by using a histogram.
 
 ```{r}
-
+# Creating a histogram of district academic achievement as measured by average "grade levels"ggplot(aes(x=gcs_mn_avg_ol), data = ach.EDA) +
 ggplot(aes(x=gcs_mn_avg_ol), data = ach.EDA) +
-  geom_histogram(color="black", fill="#99CCFF") +
+  geom_histogram(color="black", fill="blueviolet") +
   xlab("Average Test Scores (Grade Levels)") +
   ylab("Frequency")
 
@@ -161,7 +163,7 @@ Before moving onto our analysis, we can also look at the variation in test score
 
 ach.EDA %>% mutate(stateabb = reorder(stateabb, gcs_mn_avg_ol, FUN = median)) %>% 
   ggplot(aes(stateabb, gcs_mn_avg_ol, group = stateabb)) + 
-  geom_boxplot(fill = "#99CCFF") +
+  geom_boxplot(fill = "lightsalmon1", outlier.color = "black", outlier.fill = "lightsalmon1", outlier.shape = 21) +
   labs(x = "State Abbreviation", y = "Average District Test Scores (Grade Levels)") + theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
 
 
@@ -174,54 +176,133 @@ In our analysis, we hope to understand the factors that contribute to such varia
 
 To decide our priority predictors, we can start of by visually summarizing the overall relationships between these variables and our outcome for academic achievement, `cs_mn_avg_ol`. In contrast our achievement variable used in the plots above, `cs_mn_avg_ol` measures academic achievement in terms of standard deviations away from the national average. 
 
-Before we begin, it would be helpful to summarize create a list of our predictors for this analysis. The covariates we are exploring include: 
 
-- `urban`: if the district is in a city/urban locale (binary; 0 = no, 1 = yes)
-- `avgrdall`: average per grade enrollment (number of students)
-- `perfrl`: percent free lunch in the grade (percentage; range: 0-1)
-- `perell`: % of all students in the district that are English Language Learners (ELL ) (percentage; range: 0-1)
-- `perspeced`: % of all students in the district that qualify for Special Education (percentage; range: 0-1)
-- `nsch`: number of schools in district (count)
-- `aides`: number of instructional aides (count)
-- `corsup`: number of instructional coordinators and supervisors (count)
-- `elmgui`: number of Elementary Guidance Counselors (count)
-- `stutch_all`: pupil teacher ratio (ratio of number of pupils to number of students in district)
-- `ppexp_tot`: total per pupil expenditures (dollars)
+Before we begin, we need to specify our list of district-level predictors to choose from. Our current data set currently has approximately 60 covariates. However, some of these covariates are only applicable to some sub-populations. For example, for average SES, the data set includes a district-level measure and a measure broken down into different racial groups. For this project, we are only interested in the district-level measures. 
+
+Our final list of covariates that we will be analyzing is presented below:
+
+
+```{r}
+dat.ML <- subset(dat, select = c(urban, suburb, town, rural, perind, perasn, perhsp, perblk, perwht, perfl, perrl, perfrl, perecd, perell, perspeced, totenrl, sesavgall, lninc50avgall, baplusavgall, povertyavgall, unempavgall, snapavgall,  single_momavgall, ppexp_tot, ppexp_inst, pprev_tot, cs_mn_avg_ol))
+
+```
+
+```{r}
+#running missForest to impute missing data
+#data.ML.imputed <- missForest(as.matrix(dat.ML))
+
+#converting output back to data frame to be used
+#data.ML.imputed.df <- as.data.frame(data.ML.imputed$ximp)
+
+#exporting the data frame with imputed values to be used in the future
+#write.csv(data.ML.imputed.df, file = "data_ML_imputed.csv", row.names = FALSE)
+
+```
+
+- `urban`: district is in a city/urban locale (binary; 0 = no, 1 = yes)
+- `suburb`: district is in a suburban locale (binary; 0 = no, 1 = yes)
+- `town`: district is in a town locale (binary; 0 = no, 1 = yes)
+- `rural`: district is in a rural locale (binary; 0 = no, 1 = yes)
+- `perind`: % Native American students in the district
+- `perasn`: % Asian students in the district
+- `perhsp`: % Hispanic students in the district
+- `perblk`: % Black students in the district
+- `perwht`: % White Students in the district
+- `perfl`: % students receiving free lunch
+- `perrl`: % students receiving reduced lunch
+- `perfrl`: % students receiving free or reduced lunch
+- `perecd`: % economically disadvantaged students in the district
+- `perell`: % English Language Learners
+- `perspeced`: % students who receive Special Education
+- `totenrl`: # students in the grade 
+- `sesavgall`: SES composite score 
+- `lninc50all`: log of median income
+- `baplusall`: % of adults in district with at least a bachelors degree (percentage)
+- `povertyall`: poverty rate (%)
+- `unempall`: unemployment rate (%)
+- `snapall`: SNAP recipient rate (%)
+- `single_momall`: % of household with children with single mom
+- `ppexp_tot`: revenue per pupil (dollars)
 - `ppexp_inst`: total per pupil expenditures on instruction (dollars)
-- `pprev_tot` : revenue per pupil (dollars)
-- `baplus_all`: % of adults in district with at least a bachelors degree (percentage)
-- `poverty517_all`: % of households with 5-17 year olds in poverty (percentage)
-- `singmom_all` % of household with children with single mom (percentage)
-- `snap_all` : % of households receiving snap benefits (percentage)
-- `samehouse_all`: % of households living in the same house as last year (percentage)
-- `unemp_all` : % unemployed in the district (percentage)
-- `inf_fem`: percent of 25 - 64 year old females in labor force (percentage)
-- `teenbirth_all`: percent of 15-19 year olds giving birth in district (percentage)
-- `sesall`: standardized socio-economic status composite score computed as the first principal component factor score of the following measures: median income, percent with a bachelor's degree or higher, poverty rate, SNAP rate, single mother headed household rate, and unemployment rate 
-- `cs_mn_avg_ol`: District test-based achievement math and reading scores from ordinary least quares estimate
-
-**NOTE TO OTHERS-- IM STILL WORKING ON THIS SECTION-- I CHANGED  MY LIST OF PREDICTORS TO JUST INCLUDE THE ONES FROM THE "COVS" DATA SET PLUS THE EXPENDITURE ONES SO THE ABOVE LIST AND THE BELOW GRAPHS ARE NOT APPLICABLE. I WILL FIX THIS AND UPDATE WHENEVER THERES A GAP IN PEOPLE WORKING ON THE .RMD PLEASE CARRY ON :)**
-
-**Oh and i will also make the scatter plots below look better dw**
+- `pprev_tot`: revenue per pupil (dollars)
+- `gsi`
+- `cs_mn_avg_ol`: District test-based achievement math and reading scores from ordinary least squares estimate
 
 For the continuous predictors, we can do scatter plots:
 ```{r}
-ML.dta <- read.csv("complete_data_ML.csv")
+ML.dta <- read.csv("data_ML_imputed.csv")
 
 ML.dta %>% 
-  gather(predictor, value, c(avgrdall, perfrl, perell, perspeced, nsch, aides,
-                             corsup, elmgui, stutch_all, ppexp_tot, ppexp_inst, 
-                             pprev_tot, baplus_all, poverty517_all, singmom_all, 
-                             snap_all, samehouse_all, unemp_all, inlf_fem, 
-                             teenbirth_all, sesall)) %>% 
+  gather(predictor, value, c(perind, perasn, perhsp, perblk, perwht, perfl, perrl, perfrl, perecd, perell, perspeced, totenrl, sesavgall, lninc50avgall,baplusavgall, povertyavgall, unempavgall, snapavgall, single_momavgall, ppexp_tot, ppexp_inst, pprev_tot)) %>% 
   ggplot(aes(x = value, y = cs_mn_avg_ol)) + 
-  geom_point() + 
-  facet_wrap(~ predictor, scales = 'free_x') + 
+  geom_point(size=0.05, shape = ".", alpha = 0.05, fill = "darkolivegreen3", color = "black") +
+  facet_wrap(~ predictor, scales = "free_x", ncol=5,
+             labeller = 
+               as_labeller(c("perind" = "% Native American",
+                             "perasn"= "% Asian ",
+                             "perhsp"= "% Hispanic ",
+                             "perblk"= "% Black ",
+                             "perwht"= "% White ",
+                             "perfl"= "% w/ Free lnch",
+                             "perrl"= "% w/ Reduced lnch",
+                             "perfrl"= "% Free/reduced lnch",
+                             "perecd"= "% Econ. disadvntgd",
+                             "perell"= "% English Learners",
+                             "perspeced"= "% w/ Special Ed.",
+                             "totenrl"= "# students", 
+                             "sesavgall"= "SES score", 
+                             "lninc50avgall"= "Log income",
+                             "baplusavgall"= "% w/ BA degree", 
+                             "povertyavgall"= "Poverty rate (%)",
+                             "unempavgall"= "Unemployment (%)",
+                             "snapavgall"= "SNAP rate (%)",
+                             "single_momavgall" = "% w/ Single mom",
+                             "ppexp_tot" = "Revenue PP (USD)",
+                             "ppexp_inst" = "Instuction expenditures (USD)",
+                             "pprev_tot"= "Revenue per pupil (USD)"))) + 
   xlab(NULL) + ylab("District Achievement Scores")
-```
-For the binary predictor (`urban`), we can use a box plot:
 
-```{r}
+preds = c("perind" = "% Native American",
+                             "perasn"= "% Asian Students",
+                             "perhsp"= "% Hispanic Students",
+                             "perblk"= "% Black Students",
+                             "perwht"= "% White Students",
+                             "perfl"= "% Students w/ Free Lunch",
+                             "perrl"= "% Students w/ Reduced Lunch",
+                             "perfrl"= "% Students w/ Free or Reduced Lunch",
+                             "perecd"= "% Students Economically Disadvantaged",
+                             "perell"= "% English Language Learners",
+                             "perspeced"= "% Studnets in Special Ed.",
+                             "totenrl"= "# Students Enrolled in District", 
+                             "sesavgall"= "SES Score", 
+                             "lninc50avgall"= "Log  Median Income",
+                             "baplusavgall"= "% Adults in District w/ BA degree", 
+                             "povertyavgall"= "Poverty Rate (%)",
+                             "unempavgall"= "Unemployment (%)",
+                             "snapavgall"= "SNAP Rate (%)",
+                             "single_momavgall" = "% Students w/ Single Mom",
+                             "ppexp_tot" = "Expenditure Per Pupil (USD)",
+                             "ppexp_inst" = "Instuction Expenditures Per Pupil (USD)",
+                             "pprev_tot"= "Revenue Per Pupil (USD)")
+
+p = list()
+for(i in 1:length(preds)) {
+   p[[i]] = ggplot(ML.dta, aes_string(x = names(preds)[i], y = "cs_mn_avg_ol")) + 
+  geom_point(size=0.05, shape = ".", alpha = 0.5, color = "blueviolet") + 
+  xlab(preds[i]) + ylab("District Achievement Scores") + theme_light()
+}
+
+#for(i in 1:length(preds)) {
+#   print(p[[i]])
+#}
+    
+            
+ggarrange(plotlist=p, ncol = 2)      
+
+```
+For the binary predictor (`urban`  suburb, town, rural), we can use a box plot:
+
+```{r eval=FALSE, include=FALSE}
 
 ```
 
@@ -233,8 +314,9 @@ To answer this question, we will turn to machine learning models. We will first 
 ### Creating the Training and Test Sets
 To begin our machine learning exercises, we first must great our training and test sets. Here we are using training and test sets that both include 50% of the dataset.
 ```{r}
+set.seed(20)
 #creating a data partition that splits my data frame in half
-index_train<- createDataPartition(y = ML.dta$low_dist_ach, times =1, p=0.05, list = FALSE)
+index_train<- createDataPartition(y = ML.dta$cs_mn_avg_ol, times =1, p=0.05, list = FALSE)
 
 #labeling the first "slice" as the train set
 train_set <- slice(ML.dta, index_train)
@@ -251,60 +333,58 @@ Next, we will use a Random Forest Model to determine variables of importance, as
 ```{r}
 set.seed(1)
 
-#fitting a random forest with all 22 predictors
-rf_fit <- randomForest(cs_mn_avg_ol ~ urban + avgrdall + perfrl + perell + perspeced + nsch + aides + corsup + elmgui + stutch_all + ppexp_tot + ppexp_inst + pprev_tot + baplus_all + poverty517_all + singmom_all + snap_all + samehouse_all + unemp_all + inlf_fem + teenbirth_all + sesall, data = train_set, mtry = 22, importance = TRUE)
-
+#fitting a random forest with all 28 predictors
+rf_fit <- randomForest(cs_mn_avg_ol ~ urban + suburb + town + rural + perind + 
+                                 perasn + perhsp + perblk + perwht + 
+                                 perfl + perrl + perfrl + perecd + perell +
+                                 perspeced + totenrl +
+                                 sesavgall + lninc50avgall +
+                                 baplusavgall + povertyavgall +
+                                 unempavgall + snapavgall +
+                                 single_momavgall + ppexp_tot +
+                                 ppexp_inst + pprev_tot, data = train_set, mtry = 28, importance = TRUE)
 
 variable_importance <- importance(rf_fit)
 
-variable_importance_death <- tibble(Predictor = rownames(variable_importance),
+variable_importance <- tibble(Predictor = rownames(variable_importance),
                   Gini = variable_importance[,1]) %>%
                   arrange(desc(Gini))
 
-kable(variable_importance_death[1:22,])
+labels <- c(urban = "Urban District", suburb = "Suburban District", town = "Town District", rural = "Rural District", perind = "% Native American Students", perasn = "% Asian Students",
+                             perhsp= "% Hispanic Students",
+                             perblk= "% Black Students",
+                             perwht= "% White Students",
+                             perfl= "% Students w/ Free Lunch",
+                             perrl= "% Students w/ Reduced Lunch",
+                             perfrl= "% Students w/ Free or Reduced Lunch",
+                             perecd= "% Students Economically Disadvantaged",
+                             perell= "% English Lanugage Learners",
+                             perspeced= "% Students with Special Ed.",
+                             totenrl= "Number of Students in District", 
+                             sesavgall= "SES Composite Score", 
+                             lninc50avgall= "Log  Median Income",
+                             baplusavgall= "% Adults in District w/ Bachelors(+) degree", 
+                             povertyavgall= "Poverty Rate (%)",
+                             unempavgall= "Unemployment Rate (%)",
+                             snapavgall= "SNAP Rate (%)",
+                             single_momavgall = "% Students w/ Single Mom",
+                             ppexp_tot = "Expenditures Per Pupil (USD)",
+                             ppexp_inst = "Instuction Expenditures Per Pupil (USD)",
+                             pprev_tot= "Revenue Per Pupil (USD)"
+            )
+variable_importance$labels <- as.character(labels[variable_importance$Predictor])
 
-#predicting probability of estimates for test set
-probs_rf <- predict(rf_fit, newdata = test_set, type = "class")
-
-#converting probabilities to predicted response labels
-
-y_hat_rf <- ifelse(probs_rf > 0.5, 1, 0)
-
-#obtaining the confusion matrix
-
-confusionMatrix(data = as.factor(y_hat_rf), 
-                reference = as.factor(test_set$low_dist_ach), 
-               positive = "1")
+chart.importance <- ggplot(variable_importance, aes(x = reorder(labels, Gini), y = Gini)) + geom_col(width = 0.5, fill = "darkolivegreen3") + theme_light() + coord_flip() + xlab("Predictor") + ylab ("Gini Coefficient"); chart.importance
 
 ```
+
 
 From the above outputs we can see two things. First, our random forest model is fairly accurate at predicting test scores with an accuracy of 80.47%. Second, as measured by the Gini coefficient, percent free lunch is the most important predictor of test scores followed by percent of adults who have their bachelors degree. Other important indicators include socio-economic status and poverty. 
 
-### Regression Tree
 
-To supplement the above results from the random forest, we can also fit our data to a regression tree model. 
-```{r}
-tree = tree(cs_mn_avg_ol ~ urban + avgrdall + perfrl + perell + perspeced + 
-              nsch + aides + corsup + elmgui + stutch_all + ppexp_tot + 
-              ppexp_inst + pprev_tot + baplus_all + poverty517_all + 
-              singmom_all + snap_all + samehouse_all + unemp_all + 
-              inlf_fem + teenbirth_all + sesall, data = train_set)  
+So based on these analyses, what predictors should we focus on? It is clear from the random forest that some variables are more important for academic success than others. For example, percent of students receiving free lunch has high priority in both the random forest model and the regression tree models so warrants attention in future analyses. We additionally want to balance the outcomes of this exploratory data analysis with the interests of our team members. For example, socio-economic status and related predictors, such as poverty, are often described as strong predictors of academic success (*source?*). Therefore, it would also be worthwhile to explore these variable further and the nature of their associations with academic achievment outcomes. 
 
-summary(tree)
-
-
-```
-
-As seen in teh above output, the regression tree only ened up including three variables in the tree construction: percent of students receiving free lunch (`perfrl`), percent of adults with at least a bachelors degree (`baplus_all`), and percent of students who are english language learners (`perell`).
-
-```{r}
-plot(tree, type = "uniform")
-text(tree, cex = 1)
-```
-
-**Need to add tree conclusions**
-
-So based on these analyses, what predictors should we focus on? It is clear from the random forest and the regression tree models that some variables are more important for academic success than others. For example, percent of students receiving free lunch has high priority in both the random forest model and the regression tree models so warrants attention in future analyses. We additionally want to balance the outcomes of this exploratory data analysis with the interests of our team members. For example, socio-economic status and related predictors, such as poverty and unemployment, are often described as strong predictors of academic success (*source?*). Therefore, it would also be worthwhile to explore these variable further and the nature of their associations with academic achievement outcomes. 
+**feel free to add to or change any of the above to make the transition smoother**
 
 Therefore, we explore different covariates of interest that highly correlate with average district academic achievement, relative to the national mean measured in standard deviation units, including unemployment, free lunch, SES, and poverty. In this section we look at poverty, unemployment, and SES composite scores.
 
@@ -525,427 +605,87 @@ ggplot(aes(x=sesavgall, y=cs_mn_avg_ol), data = dat) +
 *Next we further explore the relationship between academic achievement and socioecnomic factors by looking at the percent of students receiving free lunch_____ please continue on from here! hwaiting ye eun!*
 
 
+## School-Related Food-Assistance Programs and Average Academic Achievement 
+
+We further explore the relationship between academic achievement and socioeconomic factors by looking at how school-related food-assistance programs impact academic achievement outcomes at the national level. There were two variables that related to food-assistance programs. One that measured the proportion of households receiving Supplemental Nutrition Assistance Program (SNAP) benefits in a district and one that measured percent free or reduced lunch in a district. From the scatter plots below we can observe that, unsurprisingly, both were related to academic achievement in a similar way. Both variables have a clear linear relationship with academic achievement where districts with higher rates of supplemental food assistance programs had lower academic achievement rates. This could be because both of these variables are highly related to income and poverty. For instance, individuals and families must classify as low-income to be eligible for SNAP benefits. Lower income districts with higher poverty rates perhaps have higher rates of food-assistance programs, less academic resources and investment in education, and therefore lower academic results. 
+
+```{r}
+bst_dat <- dat %>% dplyr::select(cs_mn_avg_ol| perfrl) 
+bst_dat2<- covs %>% dplyr::select(perfrl |urban|sesavgall)
+dat_free_lunch <- full_join(bst_dat, bst_dat2)
 
 
+#snap receipt rate 
+snap <- ML.dta %>%  ggplot(aes(x=snapavgall,y=cs_mn_avg_ol))+geom_point(alpha = 0.3, pch=21, color = "black", fill="cyan2") +
+  geom_smooth(se=F, lwd=0.5, lty=2, method="lm", formula = y~poly(x,3), color = "black")+labs(x="% Snap Benefits", y="Academic Achievement", title="SNAP Benefits vs. Academic Achievement in Districts")+theme_light();snap
 
----
-
-## Part 2: Congressional District, Political Leaning, and School Funding
-
----
-
-#### Setting the Stage
-
-Over this past year, states and local governments have begun a one-a-decade process of drawing new voting district boundaries. This redistricting uses population and demographic data from the census conducted by the Census Bureau, with the most recent occurring in 2020.
-
-The redistribution process was created to accurately reflect how communities change over time in the US legislative system. Maps are redrawn to ensure that districts are equally populated and representative of the district’s population. When done correctly and equitably, redistricting is a window for the political electoral processes to adapt to constituent demographics accurately, ensuring that constituents are accurately represented in local, state, and national legislation. In the words of John Adams, “an exact portrait, a miniature” of the people and communities grouped geographically.
-
-Yet, redistricting has become the most pressing threat to democracy. As described by the [Brennan Center](https://www.brennancenter.org/our-work/research-reports/gerrymandering-explained): 
-
->> But sometimes the process is used to draw maps that put a thumb on the scale to manufacture election outcomes that are detached from the preferences of voters. Rather than voters choosing their representatives, gerrymandering empowers politicians to choose their voters. This tends to occur especially when linedrawing is left to legislatures and one political party controls the process, as has become increasingly common. When that happens, partisan concerns almost invariably take precedence over all else. That produces maps where electoral results are virtually guaranteed even in years where the party drawing maps has a bad year.
-
-Alongside a [2019 Supreme Court](https://www.brennancenter.org/our-work/court-cases/rucho-v-common-cause)  ruling that **prohibits redistricting to be challenged in federal court**, this reaffirms major threats to health, education, and social safety net policies at state and national levels, further heightened midst a time of deep divisive partisanship in the United State\
-
----
-
-![How Gerrymadering Manipulates District Boundaries](How_to_Steal_an_Election_-_Gerrymandering.svg.png){width=75% height=75%}
-[Image source](https://www.fairvote.org/new_poll_everybody_hates_gerrymandering)
-
----
-
-#### In summary,\
-- Rigged maps **make elections less competitive**, severely dampening the voices and political voices of all Americans
-
-- Both historical and current residential segregation means that **marginalized communities are the targets of pointed redistricting**; effectively creating a tool for parties to slice and dice districts in ways that discriminate against communities of color
-
-- **Gerrymandering is getting worse.** Applying data science to work, intricate computer algorithms, and sophisticated data on voter patterns have allowed political gamesmanship to “maximize” partisan benefit
-
----
-
-### Intial Questions
-
-As a part of a larger exploration of the **impact of educational and social safety net policies and sociodemographic characteristics at the state and school district levels on predictors of student success.** We apply the SEDA data set to provide a comprehensive picture of factors at the family, district, and state-level factors that we hypothesize influence student educational outcomes.
-
-To prime further data analyses, the objective of this first portion is to investigate the differences, if any, in school district expenditure between political preferences at the Congressional District level.
-
-#### Specifically,
-
-##### Does spending on school districts differ by political ideology?
-
-The analyses below highlight differences by drawing from data on per student expenditure and per teacher expenditures. This was facilitated at the Congressional District level to capture the granularities unafforded when looking at state-only levels.
-
-An interactive map facilitates this comparison by grouping dominant political preferences and expenditure per student and teacher averaged over school districts in a Congressional District.
-
-As mentioned in class, 
-
-> Plots of maps can be very powerful, very informative and very aesthetically pleasing visualizations.
-
-The goal was to be able to provide a compelling story using nationally representative data.
-
-All in all, we hope that this work underscores the potential impact of gerrymandering on students and teachers by visualizing differences in spending in education for grades 3-8 based on the dominant political ideology in Congressional districts.
-
----
-
-### Data Sources
-
-**School Expenditure data** are available from: https://exhibits.stanford.edu/data/catalog/db586ns4974
-
-**Political Ideology data** are available from: https://americanideologyproject.com/
-
-- For further background on how constituent policy preferences were measured, please see this paper by [Tausanovitch and Warshaw (2013)](https://americanideologyproject.com/JOP_Tausanovich_Warshaw_2013.pdf) 
-
-Variables of interest include:\
-
-- *leaid* : NCES Local Education Agency (District) Code\
-- *year* : spring of school year\
-- *grade* : grade level\
-- *cdcode*, *cd_fips* : congressional district code\
-- *ppexp_tot* : total per pupil expenditures; tot exp/enrolled\
-- *ppexp_inst* : instruction expenditures; instr exp/enrolled\
-- *mrp_mean* : mean policy preferences of citizens in every congressional district estimates using multilevel regression with poststratification
-
----
-
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-# Packages
-library(haven)
-library(dplyr)
-library(USAboundaries)
-library(dplyr)
-library(sf)
-library(leaflet)
-library(dplyr)
-library(sp)
-library(ggplot2)
-library(stringr)
-library(dplyr)
-library(kableExtra)
-library(plyr)
-library(systemfonts)
+#perfrl percent free or reduced lunch in the district
+free_red <- dat_free_lunch  %>% ggplot(aes(x=perfrl,y=cs_mn_avg_ol))+geom_point(alpha = 0.3, pch=21, color = "black", fill="lightsalmon1") +
+  geom_smooth(se=F, lwd=0.5, lty=2, method="lm", formula = y~poly(x,3), color = "black")+labs(x="% Free or Reduced Lunch", y="Academic Achievement", title="Free or Reduced Lunch vs. Academic Achievement in Districts")+theme_light(); free_red
 ```
 
+Other relevant variables that can be considered alongside academic achievement and food-related programs are geographic location (urban vs. rural) and socioeconomic status because both of these factors highly influence food and education quality and accessibility. From the graphs below it seems that higher socioeconomic status was related to higher academic achievement. Additionally, it seems that districts in urban and rural areas had similar academic achievement outcomes.
 
-### Background: Party Platform Positions on Education 
 
-This question arose to compare the two major parties – Democrats and Republicans – to illuminate how political platforms and values have direct impacts at the level of school districts.\
+```{r}
+#ses
+ses <- dat_free_lunch %>% ggplot(aes(x=sesavgall,y=cs_mn_avg_ol))+geom_point(alpha = 0.3, pch=21, color = "black", fill="darkolivegreen3") +
+  geom_smooth(se=F, lwd=0.5, lty=2, method="lm", formula = y~poly(x,3), color = "black") +labs(x="Socioeconomic Status", y="Academic Achievement", title="SES vs. Academic Achievement in Districts")+theme_light(); ses
 
-An overview of the party education platforms is included below:
-
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-tabd <- read.csv('Amy_Table.csv')
-tabd %>%
-  kbl(caption="Comparison between Dem and GOP platforms for K-12 education",
-      format= "html",
-      col.names = c("Topic","Democrat","Republican"),
-                  align="l",) %>%
-  column_spec(2, background = 'aliceblue') %>%
-  column_spec(3, background = 'mistyrose') %>%
-  row_spec(0, bold =T, background='lightgrey', color='black') %>%
-  kable_paper(bootstrap_options = c("striped", "hover", "condensed", "responsive"),
-              full_width = F,
-              html_font = "calibri",
-              fixed_thead = T,
-              position = 'center') %>%
-  column_spec(1,bold=T, border_right =T) %>%
-  footnote(general='https://www.ascd.org/blogs/what-the-democrats-and-republicans-stand-for-on-education-excerpts-from-party-platforms',
-           general_title="Source: ") %>%
-  scroll_box(width = "100%", height = "650px")
+#urban/rural
+urban <- dat_free_lunch  %>% mutate(urban=recode(urban,`1` = "Urban", `0` = "Rural")) %>% ggplot(aes(x=as.factor(urban),y=cs_mn_avg_ol))+geom_boxplot(color="blueviolet")+labs(x="Geography", y="Academic Achievement", title="Urban/Rural vs. Academic Achievement in Districts")+theme_light(); urban 
 ```
 
----
+## Regression Model Without Interaction Terms
 
-### Exploratory Analyses: Mapping Constituent Ideology by Congressional District
+Since we are interested in school-related food-assistance policy, we chose percent free or reduced lunch in the district as our variable of interest for this analysis. While SNAP benefits influence academic achievement outcomes, the program targets individuals and households, not schools directly. Moreover, as shown before, percent free or reduced lunch was a stronger predictor of academic achievement than SNAP benefits. We will estimate the effect of percent free or reduced lunch, socioeconomic status, and geography on academic achievement by running a regression model with percent free or reduced lunch, urban/rural, and socioeconomic status.
 
-To begin, we first must accurately delineate between politically right and left Congressional districts.\
-
-Here, we applied estimates of political preferences from a collection of survey measures to capture the distribution of political preferences **based on those living in an geographic area**.\
-
-This was purposeful. As mentioned above, one concern we had was that, as a result of gerrymandering, relying only on the election results and the parties of Congressional representatives may underweight the true distribution of political preferences among those living in the District. Therefore, we drew from an opensource project, The American Ideology project, (Tausanovitch and Warshaw, 2013)[https://americanideologyproject.com/], to:
-
-1. Explore the distribution of political preferences by geographic regions, and  
-2. The magnitude, or "how radical" preferences are.
-
-```{r echo=TRUE, message=FALSE, warning=FALSE, dpi = 200}
-# Loading USAboundaries from GitHub
-devtools::install_github("ropensci/USAboundaries")
-devtools::install_github("ropensci/USAboundariesData")
-
-# Using USAboundaries package, load the spatial data 2010-2020 Congressional districts
-spatial <- us_congressional()
-
-
-# Loading congressional ideology data for the 113th Congress from The American Ideology Project, https://americanideologyproject.com/
-ideology <- read.csv('cd_113_TW_ideology_estimates.csv')
-
-
-# Joining political ideology data with the spatial data
-## String processing spatial dataset to remove leading zeros in "geoid"
-spatial <- spatial %>% # Removing Alaska, Hawaii, and Puerto Rico
-  mutate(cd_fips = str_remove(spatial$geoid, "^0+")) %>% 
-  filter(state_abbr != 'AK') %>%
-  filter(state_abbr != 'HI') %>%
-  filter(state_abbr != 'PR')
-
-## Selecting columns of interest from ideology dataset
-ideology <- ideology %>%
-  dplyr::select(c('cd_fips', 'mrp_mean', 'pres_2012')) %>%
-  mutate(cd_fips = as.character(cd_fips))
-
-map <- left_join(spatial, ideology, by = 'cd_fips')
-
-# Mapping
-ideology_map <- ggplot() +
-  geom_sf(data = map, 
-          aes(geometry=geometry, fill=mrp_mean), alpha=2) +
-  scale_fill_distiller(palette='RdBu', 
-                       limits = c(-1.2,1.2), 
-                       direction = -1, 
-                       breaks=c(-1,0,1),
-                       labels=c('Left','Center','Right'),
-                       name='Political Leaning') +
-  theme(panel.grid.major = element_blank(), 
-        panel.background = element_blank(),
-        axis.title.x=element_blank(),
-        axis.text.x=element_blank(),
-        axis.ticks.x=element_blank(),
-        axis.title.y=element_blank(),
-        axis.text.y=element_blank(),
-        axis.ticks.y=element_blank(),
-        plot.subtitle = element_text(size=9, color='grey45')) +
-  labs(title='Contituent Political Ideology by Congressional District', 
-       subtitle = 'Source: The American Ideology Project (Tausanovitch & Warshaw, 2015)')
-
-ideology_map
+```{r}
+set.seed(1)
+#regression model no interaction
+model <- lm(cs_mn_avg_ol~perfrl+urban+sesavgall, data=dat_free_lunch)
+broom::tidy(model)
 ```
 
-As shown, we do find spatial correlations in political preferences. Politically right Congressional districts are clustered in the Midwest and South, and politically left Congressional districts tend to be located on the coasts.
+From our model, we can see that our main predictor (percent free or reduced lunch) as well as the other two covariates (socioeconomic status and geography) have a statistically significant relationship with the outcome variable (academic achievement) at a 5% significance level. Specifically:
 
-In addition to, we find that the *extent* to which these districts are right- or left-leaning is not balanced. Districts that are more conservative (or right-leaning), on average, are much greater than liberal (or left-leaning) Districts. In other words, 
-**conservative Districts tend to be much more radically so than liberal Districts.**
+* perfrl: Among rural districts with average SES, a one unit increase in percent free or reduced lunch was associated with being 1.035256105 standard deviation units below the national district average academic achievement.
 
-In addition, we find that the *magnitude* to which these districts are right- or left-leaning is not balanced. Districts that are more conservative (or right-leaning), on average, are much greater than liberal (or left-leaning) Districts. In other words, **conservative Districts tend to be much more radically so than liberal Districts.**\
+* urban: Districts in urban areas with average SES and no percent free or reduced lunch had academic achievement rates that were 0.005178577 standard deviation units below the national district average academic achievement. 
 
-Now, how does this relate to spending on education?
+* sesavgall: Among districts in rural areas and with no percent free or reduced lunch, a one unit increase in socioeconomic status was associated with being 0.075776947 standard deviation units above the national district average academic achievement.
 
----
+This model assumes that that the effect of any individual predictor (percent free or reduced lunch, SES, geography) on the outcome (academic achievement) is independent of the other predictors in the model. However, this may not be a reasonable assumption given that percent free or reduced lunch may have a different effect on academic achievement based on different values of socioeconomic status and urban versus rural settings. Therefore, as opposed to considering the effect of socioeconomic status and geography in isolation, we could see how they interact with perfect free or reduced lunch by adding interaction terms in our model.
 
-### SEDA Dataset Prep
+## Regression Model with Interaction Terms
 
-For the following code, please ensure that you have the Stanford Education Data Archive *codebook_covariates_v1_1.xlsx* installed and available in your working directory
-
-- These data are available for download from https://exhibits.stanford.edu/data/catalog/db586ns4974
-
-To clean the data, we collapsed school districts into their respective Congressional Districts, averaging the per pupil expenditure and per instructor expenditure for a single measure per Congressional District.
-
-```{r message=FALSE, warning=FALSE}
-# Loading SEDA dataset
-full_data_yr <- read_dta("district by year by grade covariates from acs and ccd master_v1_1.dta")
-# full_data_yr1 <- read_dta("https://stacks.stanford.edu/file/druid:db586ns4974/district%20by%20year%20by%20grade%20covariates%20from%20acs%20and%20ccd%20master_v1_1.dta")
-
-# New data frame of variables of interest
-dat <- full_data_yr %>% # filtering to 2013
-  filter(year ==2013) 
-
-dat <- dat[!duplicated(dat$leaid),] %>% # keeping only one observation per school district (removing grade level layer)
-  dplyr::select('leaid','cdcode','ppexp_tot','ppexp_inst')  
-
-dat_na <- sum(is.na(dat$ppexp_tot), is.na(dat$ppexp_inst)) # any NAs?  
-x <- is.na(dat$ppexp_inst) 
-y <- is.na(dat$ppexp_tot)
-nonpaired_na <- sum(any(x != y)) # Confirms that all NA values are paired, so we can remove rows for both ppexp_tot and ppexp_inst combined 
-rm(x,y,nonpaired_na, dat_na)
-
-dat <- dat[!(is.na(dat$ppexp_tot)), ] # removing 50 NA values (25 observations)
-
-# Final clean dataset with avg values by Congressional district
-dat <- ddply(dat, ~cdcode, transform, ppexp=mean(ppexp_tot),  piexp=mean(ppexp_inst))
-
-seda <- dat[!duplicated(dat$cdcode),] %>% # keeping only one observation per Congressional district
-  dplyr::select(-'leaid',-'ppexp_tot',-'ppexp_inst') # dropping school district measures
+```{r}
+#regression model with interaction 
+model2 <- lm(cs_mn_avg_ol~perfrl+urban+sesavgall+perfrl*urban+perfrl*sesavgall, data=dat_free_lunch)
+broom::tidy(model2)
 ```
 
----
+From the interaction model, we can see that our interaction terms are both statistically significant. Hence, we know that the effect of percent free or reduced lunch on academic achievement is different for urban versus rural districts as well as for different values of socioeconomic status. We can show the interaction visually by graphing the relationship between percent free or reduced lunch and academic achievement by urban versus rural districts and for different values of socioeconomic status. However, to better plot and interpret the values of socioeconomic status which is currently a continuous variable, we can create categories of socioeconomic status like they do in the Stanford Education Data Archive Technical Documentation (https://stacks.stanford.edu/file/druid:db586ns4974/seda_documentation_4.0.pdf).
 
-#### Exploratory Analysis: Distribution of Education Funding
+```{r}
+dat_free_lunch <- dat_free_lunch %>%  mutate(ses_cat = case_when(
+                                                sesavgall < -2.5 ~"Below 2.5",
+                                                 sesavgall >= -2.5 &  sesavgall < -1.5 ~ "Between -2.5 & -1.5",
+                                                 sesavgall >= -1.5 &  sesavgall < -0.5 ~ "Between -1.5 & -0.5",
+                                                 sesavgall >= -0.5 &  sesavgall < 0.5 ~ "Between -0.5 & 0.5",
+                                                 sesavgall  >= 0.5 &  sesavgall < 1.5 ~ "Between 0.5 & 1.5",
+                                                 sesavgall >= 1.5 &  sesavgall < 2.5 ~ "Between 1.5 & 2.5",
+                                                 sesavgall >= 2.5 ~"Above 2.5"))
+library(ggpubr)
+F = as.formula("y~x")
 
-Now that we’ve delineated between politically right and left Congressional District, we explored **how per student and per teacher spending differs between Districts.**
+lunch_plot<-dat_free_lunch %>% mutate(urban=recode(urban,`1` = "Urban", `0` = "Rural")) %>% ggplot(aes(perfrl, cs_mn_avg_ol, color=as.factor(urban))) + geom_smooth(method = "lm", se=FALSE)+scale_color_manual(values=c("darkolivegreen3","blueviolet"))+labs(x="% Free or Reduced Lunch", y="Academic Achievement", title="Free/Reduced Lunch & Academic Achievement by Geography")+guides(color=guide_legend(title="Geography"))+stat_regline_equation(label.x = 0.75)+theme_light(); lunch_plot
 
-A layered histogram will suffice. From this we can explore: 
 
-1. How much is invested in students and teachers, scaled using the underlying dispersion of values (in units of standard deviation)
+ses_plot<-dat_free_lunch %>% drop_na() %>%ggplot(aes(perfrl, cs_mn_avg_ol, color=as.factor(ses_cat))) + stat_smooth(method="lm",fullrange=TRUE, se=FALSE,size=0.65)+scale_color_manual(values=c("darkolivegreen3","blueviolet","black","cyan2","goldenrod","blue","lightsalmon1"))+labs(x="% Free or Reduced Lunch", y="Academic Achievement", title="Free/Reduced Lunch & Academic Achievement by SES")+guides(color=guide_legend(title="SES category"))+stat_regline_equation(label.x = 0.7, label.y.npc=0.9)+theme_light(); ses_plot
 
-2. How clustered is the spending? i.e. plot skew and spread
-
-But first, we want to compare spending based on the national mean and variance. This provides a way to accurately compare education funding per Congressional district based on the national average across all districts. 
-
-To do such, a scale (standard deviations) was applied to per student and teacher expenditures in the remaining analyses. 
-
-```{r message=FALSE, warning=FALSE, dpi = 200}
-# Joining education dataset with map dataset
-seda <- seda %>% 
-  mutate(cd_fips=as.character(cdcode)) %>%
-  dplyr::select(-'cdcode')
-
-map <- left_join(map, seda, by = 'cd_fips') 
-
-# Per pupil Congressional district expenditure
-map$z <- scale(map$ppexp)
-
-# Per instructor Congressional district Expenditure
-map$z_i <- scale(map$piexp)
-
-# Creating indicator variable for histogram layers
-hist <- map %>% 
-  mutate(left = ifelse(mrp_mean>0, 'Right', 'Left')) # indicator variable for right (1) and left (0)
-
-hist_na <- sum(is.na(hist$left)) # any NAs for unknown political ideology? 
-hist <- hist[!(is.na(hist$left)), ] # removing 1 NA value
-rm(hist_na)
-
-# Distribution of per Pupil expenditures by Political Ideology
-hist_p <- ggplot(hist, aes(x=z,color=left, fill=left)) +
-  geom_histogram(position='identity', alpha = 0.3) +
-  scale_color_manual(values=c('steelblue','salmon')) +
-  scale_fill_manual(values=c('steelblue','salmon')) +
-  scale_x_continuous(breaks=seq(-2,7,1),labels=seq(-2,7,1)) +
-  labs(title='Distribution of Per Pupil Expediture',
-       x='Scaled (standard deviation units)',
-       y='Count',
-       fill="Political Leaning") +
-  guides(color=F) +
-  theme_light()
-
-# Distribution of per Instructor expenditures by Political Ideology
-hist_i <- ggplot(hist, aes(x=z_i,color=left, fill=left)) +
-  geom_histogram(position='identity', alpha = 0.3) +
-  scale_color_manual(values=c('steelblue','salmon')) +
-  scale_fill_manual(values=c('steelblue','salmon')) +
-  scale_x_continuous(breaks=seq(-2,7,1),labels=seq(-2,7,1)) +
-  labs(title='Distribution of Per Instructor Expediture',
-       x='Scaled (standard deviation units)',
-       y='Count',
-       fill="Political Leaning") +
-  guides(color=F) +
-  theme_light()
-
-## Dropping NAs to calculate group averages
-z_avgs <- hist[complete.cases(hist$z),] 
-z_i_avgs <- hist[complete.cases(hist$z_i),]
-na_z <- sum(is.na(hist$z)) # Ensuring that NAs are properly dropped
-na_z_i <- sum(is.na(hist$z_i)) # Ensuring that NAs are properly dropped
-rm(na_z, na_z_i)
-
-## Data frame with group averages
-mu <- ddply(z_avgs, 'left', summarize, grp.mean=mean(z))
-mu_i <- ddply(z_i_avgs, 'left', summarize, grp.mean=mean(z_i))
-
-# Final histogram of per Pupil expenditures by Political Ideology
-hist_p <- hist_p + geom_vline(xintercept=mu$grp.mean[1], color='dodgerblue', linetype='dashed') +
-  geom_vline(xintercept=mu$grp.mean[2], color='tomato', linetype='longdash'); hist_p
-
-# Final histogram of per Instructor expenditures by Political Ideology
-hist_i <- hist_i + geom_vline(xintercept=mu_i$grp.mean[1], color='dodgerblue', linetype='dashed') +
-  geom_vline(xintercept=mu_i$grp.mean[2], color='tomato', linetype='longdash'); hist_i
 ```
 
-From the histogram, we find that, indeed, confirms our hypothesis: **that, as expected from party platforms positions, more conservative districts invest less in students and teachers.**\
+The graphs above show that the relationship between percent free or reduced lunch and academic achievement is in fact different for districts in rural versus urban areas as well as for different values of socioeconomic status. The slope for urban areas is slightly steeper than that of rural areas meaning that the effect of percent free or reduced lunch on academic achievement in districts is greater in urban areas than rural areas. Furthermore, the relationship between percent free or reduced lunch and academic achievement changes more rapidly in urban areas than in rural areas. We can also see that the relationship varies for different categories of socioeconomic status, especially for districts that are at the extremes (2.5 standard deviation units above and 2.5 standard deviation units below the average national socioeconomic status). The relationship between percent free or reduced lunch and academic outcomes is positive for districts that are 2.5 standard deviation units above whereas for all other socioeconomic status categories the relationship is negative. Additionally, it seems that the relationship is particularly strong in districts with SES that are between 1.5 and 2.5 standard deviation units above the average national socioeconomic status. However, there are several other factors that may affect academic achievement such as parental educational background, parenting style, parental occupation, financial security in a household, and the quality of food in a school. Percent free or reduced lunch relates to accessibility of food but not the quality of the food, which is an important difference. Hence, a limitation to this analysis is that it does not explore how these other relevant factors may affect the relationship between academic achievement and percent free or reduced lunch at different levels of SES and urban versus rural settings. While this relationship is evaluated at the district level in this data set, perhaps looking at the effects at the school or county level would have different implications. Moreover, this analysis looked at this relationship at a national level. Analyzing the relationship by districts in a state may also show between state variation. Free or reduced lunch programs also vary by state in terms eligibility and quality of food, which is an important difference that is not considered in this analysis. All in all, the relationship between academic achievement and percent free or reduced lunch is highly complex and nuanced, with several observable and unobservable factors affecting how food assistance policies influence academic achievement outcomes in districts. What the data and this analysis specifically do show is that the relationship between academic achievement and percent free or reduced lunch differs significantly in urban versus rural districts and in different levels of socioeconomic status.
 
-- The mean spending is different between districts, with districts that are more left-leaning, on average, investing more in students and teachers.
 
-- In addition, the distribution of spending is less ‘bunched’ in liberal Districts a right skew (meaning there are more districts that spend above the national average in students and teachers).\
-
-Now, let's merge Congressional district boundaries and education spending together in a single visualization.
-
---- 
-
-### Final Analysis: Mapping Average District Spending by Congressional District
-
-```{r message=FALSE, warning=FALSE, dpi = 130}
-# Subsetting for map layers 
-right <- map %>%
-  subset(mrp_mean >0)
-left <- map %>%
-  subset(mrp_mean <0)
-
-# Mapping per pupil Congressional District expenditure
-palette <- colorBin("Greens", domain = c(-1.5,7), bins = 9)
-
-leaflet(map) %>%
-  addProviderTiles(providers$CartoDB.Positron, group='Political') %>%
-  addTiles(group='Physical') %>%
-  addPolygons(data=right,
-               opacity=0.5,
-               weight=2,
-               color='salmon',
-               fillColor = ~palette(z),
-              fillOpacity = 1,
-               highlight=highlightOptions(weight=3,
-                                        color='aliceblue',
-                                        bringToFront=T),
-              group="Politically Right") %>%
-  addPolygons(data=left,
-              opacity=0.5,
-              weight=2,
-              color='steelblue',
-              fillColor = ~palette(z),
-              fillOpacity = 1,
-              highlight=highlightOptions(weight=3,
-                                      color='aliceblue',
-                                      bringToFront=T),
-               group='Politically Left') %>%
-  addLayersControl(baseGroups=c('Political', 'Physical'),
-    overlayGroups=c('Politically Right', 'Politically Left'),
-    options=layersControlOptions(collapsed = F))%>%
-  addLegend('bottomright',
-            pal=palette,
-            values=~z,
-            opacity=0.5,
-            title='Per Pupil Expenditure, scaled') 
-
-# Mapping per instructor Congressional District Expenditure
-palette_i <- colorBin("Greens", domain = c(-1.3,6), bins = 9)
-
-leaflet(map) %>%
-  addProviderTiles(providers$CartoDB.Positron, group='Political') %>%
-  addTiles(group='Physical') %>%
-  addPolygons(data=right,
-              opacity=0.5,
-              weight=2,
-              color='salmon',
-              fillColor = ~palette_i(z_i),
-              fillOpacity = 1,
-              highlight=highlightOptions(weight=3,
-                                        color='aliceblue',
-                                        bringToFront=T),
-              group="Politically Right") %>%
-  addPolygons(data=left,
-              opacity=0.5,
-              weight=2,
-              color='steelblue',
-              fillColor = ~palette_i(z_i),
-              fillOpacity = 1,
-              highlight=highlightOptions(weight=3,
-                                      color='aliceblue',
-                                      bringToFront=T),
-               group='Politically Left') %>%
-  addLayersControl(baseGroups=c('Political', 'Physical'),
-    overlayGroups=c('Politically Right', 'Politically Left'),
-    options=layersControlOptions(collapsed = F))%>%
-  addLegend('bottomright',
-            pal=palette_i,
-            values=~z_i,
-            opacity=0.5,
-            title='Per Instructor Expenditure, scaled') 
-```
-
-Toggling between the map layers provides an interactive visualization of the geographic distribution of Congressional districts lines and spending on education by political leaning.\
-
-We do indeed find spatial correlations between education spending that aligns with Congressional districts. 
-
----
-
-#### In summary,
-
-It is clear that investing in students and teachers to ensure that all can access the support needed is critical for equity in education. We find that despite that for right-leaning Districts, the magnitude in which constituent preferences are predominantly sided is much greater than for left-leaning Districts. In other words, Districts that are more left-leaning, are less radically liberal (and more neutral) than right-leaning Districts are radically conservative.\
-
-Yet, left-leaning districts invest more on average in students and teachers, with the leading Districts left-leaning. Further, follow-up analyses may want to look at other outcomes, such as student teacher ratio and proportions of special education students, English language learners, special education teachers, and guidance counselors in school districts between Congressional Districts.
