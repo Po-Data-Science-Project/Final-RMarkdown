@@ -34,10 +34,11 @@ In this repository you can explore our final project.
   5. To insert graph pictures, the code is:  
 
 `\<p align="center" width="100%">`  
-    `\<img width=" **some percentage (i.e. 80%)** " src=" **your source URL here** ">`  
+     `\<img width=" **some percentage (i.e. 80%)** " src=" **your source URL here** ">`  
 `\</p>`  
 
    - You can play around with the width percentage to optimize how big you want your image to be  
+   - the second line is tabbed (can see examples of such already in the Posts.md files)  
 
 *Now, how do I get my source URL?*  
 1. In folder \"_images", you can directly upload your screenshots in github!
