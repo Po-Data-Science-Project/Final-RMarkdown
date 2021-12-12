@@ -34,8 +34,11 @@ Specifically we are aiming to answer the following questions:
 
 #### Our Approach
 We approached these questions using a variety of methods. To determine the most important predictors of academic achievement, we first used exploratory visualization of the correlations between various predictors and academic achievement. We then used a Random Forest model to determine the relative importance of these predictors as demonstrated by their Gini coefficient.   
+
 To explore the relationship between unemployment, poverty, and socioeconomic status and academic achievement we create plots of association to see how these variables are correlated. Moreover, to estimate the effect of percent free or reduced lunch on academic achievement in districts we use a regression model, controlling for socioeconomic status and geography (urban vs. rural).   
+
 To look at how spending on education varies by political leaning within each congressional district, we create an interactive map that shows pupil expenditure in a district by political leaning. Lastly, we create a Shiny app to select predictors and visualize how they map to academic achievement.
+
 
 #### Analysis
 Analyses can be found in two parts:  
