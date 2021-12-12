@@ -1,7 +1,10 @@
 # BST 260 Project: Team Po-Data Science
 
-In this repository you can explore our final project.  
-# **Hey group mates!!!**   
+In this repository you can explore our final project. 
+
+# **Hey group mates!!!**  
+
+- Delete all of the below after everyone is done & replace with the actual Project ReadMe.md
 
 ### For the html knitting settings, please copy this in the upper header:
 - [Image of what it looks like in the Rmd](https://raw.githubusercontent.com/Po-Data-Science-Project/SEDA-Maps/main/Screen%20Shot%202021-12-12%20at%207.40.32%20AM.png?token=AVNFGN32C3QOFCDAX2SUS3LBWXXDO)
@@ -31,8 +34,10 @@ In this repository you can explore our final project.
   5. To insert graph pictures, the code is:  
 
 \<p align="center" width="100%">  
-    \<img width="50%" src=" **your source URL here** ">  
+    \<img width=" **some percentage (i.e. 80%)** " src=" **your source URL here** ">  
 \</p>  
+
+   - You can play around with the width percentage to optimize how big you want your image to be  
 
 *Now, how do I get my source URL?*  
 1. In folder \"_images", you can directly upload your screenshots in github!
