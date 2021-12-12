@@ -33,26 +33,28 @@ library(ggpubr)
 
 
 ## Overview and Motivation
-*Provide an overview of the project goals and the motivation for it. Consider that this will be read by people who did not see your project proposal.*
-In our project, we use the SEDA dataset that maps student achievement based on different district level covariates. The [Educational Opportunity Project at Stanford University](https://edopportunity.org/) measures educational opportunity in diverse communities all over America. We loaded the file from the publicly available datasets that the SEDA project has online [here](https://exhibits.stanford.edu/data/catalog/db586ns4974) We use the inner join function to join the achievement scores dataset and the covariates dataset.
+There is no denying the importance of education. At the individual level, a strong education is important for personal growth, acquiring knowledge, and developing critical thinking skills. At the societal level, educational outcomes are highly correlated to better health and higher earnings. However, in the United States, there are many factors that can influence the quality of education and students' educational success. Understanding how these socioeconomic and political factors affect academic achievement outcomes can better inform future educational policies and programs. 
 
-## Related Work
-*Anything that inspired you, such as a paper, a web site, or something we discussed in class.*
+Our group was inspired to pursue this project after many of us took a statistics course at Harvard Graduate School of Education during the Spring of 2021. For this class we often applied the methods we were learning to data from The Education Opportunity Project at Stanford University. This dataset, referred to as the Stanford Education Data Archive (SEDA) provides detailed information on educational outcomes by various levels (school, district, county, community, and state). We were motivated to use this first national database of academic performance to ask questions about predictors of academic achievement and school funding between states and at the national level. 
 
-## Initial Questions
-*What questions are you trying to answer? How did these questions evolve over the course of the project? What new questions did you consider in the course of your analysis?*
+In this section of the project (Part 1) we are specifically aiming to answer the following questions:
 
+- What are some of the most important predictors of academic achievement at the national level?
+
+- How is unemployment, poverty, and socioeconomic status associated with academic achievement in Massachusetts, Washington, Nebraska, and California?
+
+- How is percent free or reduced lunch associated with academic achievement in districts at the national level? 
+
+Throughout this RMarkdown, we will discuss in depth how our though process surrounding these questions were developed and how they evolved throughout the course of the project. To summarize, the results of exploratory data analysis and machine learning models helped to inform areas of focus in our project.
 
 ## Part 1: Predicting District Academic Achievement
 
-In the first part of our project, we aim to understand the variables that predict academic achievement on a district level. This section of our project has three components. First, we will use explortory data analysis and machine learning modeling to determine key predictors of academic achievment on which to focus. Next we will take a closer look at some socio-economic status, unemployment, and poverty as predictors of academic achievement, using Washington and Massachusetts as case studies. Finally, we will explore how receiving free lunch at school predicts academic success. 
+In the first part of our project, we aim to understand the variables that predict academic achievement on a district level. This section of our project has three components. First, we will use exploratory data analysis and machine learning modeling to determine key predictors of academic achievement on which to focus. Next we will take a closer look at some socio-economic status, unemployment, and poverty as predictors of academic achievement, using Washington and Massachusetts as case studies. Finally, we will explore how receiving free lunch at school predicts academic success. 
 
 
 ### Data Source:
 
-Data for this portion of the project is obtained from the Stanford
-
-**this still needs to be done-- describing the data source**
+In our project, we use the SEDA dataset that maps student achievement based on different district level covariates. The [Educational Opportunity Project at Stanford University](https://edopportunity.org/) measures educational opportunity in diverse communities all over America. We loaded the file from the publicly available datasets that the SEDA project has online [here](https://exhibits.stanford.edu/data/catalog/db586ns4974) We use the inner join function to join the achievement scores dataset and the covariates dataset.
 
 ```{r}
 # Load achievement data (district, CS, pooled) 
@@ -127,7 +129,7 @@ dat <- inner_join(dat, spending, by = c("sedalea", "fips"))
 
 For the exploratory data analysis, we start by summarizing our outcome of interest: district academic achievement. As mentioned in the code above, the data set that we imported for our measures academic achievement in terms of standard deviation units away form the national mean. While we can compare relative performance using this measure, interpreting standard deviation units for exploratory data analysis is not too useful, and can be difficult to interpret. Therefore, we will import another SEDA dataset that measures academic achievement outcomes in terms of "grade levels" using the variable `gcs_mn_avg_ol.`
 
-As with `cs_mn_avg_ol`, this variable indicates the average math and reading scores for grades 3  through 9 from academic years 2008-2009 to 2015-2016. This scale, however, is in "grade levles" where 5.5 is average across all districts (mid point of grades 3 and 8, the grades that participate in testing). Using this scale means that if a district has an average grade level of 7.5, their students math and reading scores are, on average, similar to students who are one grade level higher, when compared to an average district in the nation. 
+As with `cs_mn_avg_ol`, this variable indicates the average math and reading scores for grades 3 through 9 from academic years 2008-2009 to 2015-2016. This scale, however, is in "grade levles" where 5.5 is average across all districts (mid point of grades 3 and 8, the grades that participate in testing). Using this scale means that if a district has an average grade level of 7.5, their students math and reading scores are, on average, similar to students who are one grade level higher, when compared to an average district in the nation. 
 
 
 ```{r}
@@ -174,7 +176,7 @@ From the graph above, we notice there is a lot of variation in test scores both 
 
 In our analysis, we hope to understand the factors that contribute to such variation between districts across the United States. The covariate data set has many different variables, many of which may predict district test scores. However, for the purpose of our project, we want to focus in on a few key covariates in order to produce more focused and meaningful conclusions.
 
-To decide our priority predictors, we can start of by visually summarizing the overall relationships between these variables and our outcome for academic achievement, `cs_mn_avg_ol`. In contrast our achievement variable used in the plots above, `cs_mn_avg_ol` measures academic achievement in terms of standard deviations away from the national average. 
+To decide our priority predictors, we can start of by visually summarizing the overall relationships between these variables and our outcome for academic achievement, `cs_mn_avg_ol`. In contrast our achievement variable used in the plots above, `cs_mn_avg_ol` measures academic achievement in terms of standard deviations away from the national average. **explain this variable more here and what it means**
 
 
 Before we begin, we need to specify our list of district-level predictors to choose from. Our current data set currently has approximately 60 covariates. However, some of these covariates are only applicable to some sub-populations. For example, for average SES, the data set includes a district-level measure and a measure broken down into different racial groups. For this project, we are only interested in the district-level measures. 
@@ -232,77 +234,118 @@ For the continuous predictors, we can do scatter plots:
 ```{r}
 ML.dta <- read.csv("data_ML_imputed.csv")
 
-ML.dta %>% 
-  gather(predictor, value, c(perind, perasn, perhsp, perblk, perwht, perfl, perrl, perfrl, perecd, perell, perspeced, totenrl, sesavgall, lninc50avgall,baplusavgall, povertyavgall, unempavgall, snapavgall, single_momavgall, ppexp_tot, ppexp_inst, pprev_tot)) %>% 
-  ggplot(aes(x = value, y = cs_mn_avg_ol)) + 
-  geom_point(size=0.05, shape = ".", alpha = 0.05, fill = "darkolivegreen3", color = "black") +
-  facet_wrap(~ predictor, scales = "free_x", ncol=5,
-             labeller = 
-               as_labeller(c("perind" = "% Native American",
-                             "perasn"= "% Asian ",
-                             "perhsp"= "% Hispanic ",
-                             "perblk"= "% Black ",
-                             "perwht"= "% White ",
-                             "perfl"= "% w/ Free lnch",
-                             "perrl"= "% w/ Reduced lnch",
-                             "perfrl"= "% Free/reduced lnch",
-                             "perecd"= "% Econ. disadvntgd",
-                             "perell"= "% English Learners",
-                             "perspeced"= "% w/ Special Ed.",
-                             "totenrl"= "# students", 
-                             "sesavgall"= "SES score", 
-                             "lninc50avgall"= "Log income",
-                             "baplusavgall"= "% w/ BA degree", 
-                             "povertyavgall"= "Poverty rate (%)",
-                             "unempavgall"= "Unemployment (%)",
-                             "snapavgall"= "SNAP rate (%)",
-                             "single_momavgall" = "% w/ Single mom",
-                             "ppexp_tot" = "Revenue PP (USD)",
-                             "ppexp_inst" = "Instuction expenditures (USD)",
-                             "pprev_tot"= "Revenue per pupil (USD)"))) + 
-  xlab(NULL) + ylab("District Achievement Scores")
-
-preds = c("perind" = "% Native American",
-                             "perasn"= "% Asian Students",
-                             "perhsp"= "% Hispanic Students",
-                             "perblk"= "% Black Students",
-                             "perwht"= "% White Students",
-                             "perfl"= "% Students w/ Free Lunch",
-                             "perrl"= "% Students w/ Reduced Lunch",
-                             "perfrl"= "% Students w/ Free or Reduced Lunch",
-                             "perecd"= "% Students Economically Disadvantaged",
-                             "perell"= "% English Language Learners",
-                             "perspeced"= "% Studnets in Special Ed.",
-                             "totenrl"= "# Students Enrolled in District", 
-                             "sesavgall"= "SES Score", 
-                             "lninc50avgall"= "Log  Median Income",
-                             "baplusavgall"= "% Adults in District w/ BA degree", 
-                             "povertyavgall"= "Poverty Rate (%)",
-                             "unempavgall"= "Unemployment (%)",
-                             "snapavgall"= "SNAP Rate (%)",
-                             "single_momavgall" = "% Students w/ Single Mom",
-                             "ppexp_tot" = "Expenditure Per Pupil (USD)",
-                             "ppexp_inst" = "Instuction Expenditures Per Pupil (USD)",
-                             "pprev_tot"= "Revenue Per Pupil (USD)")
-
-p = list()
-for(i in 1:length(preds)) {
-   p[[i]] = ggplot(ML.dta, aes_string(x = names(preds)[i], y = "cs_mn_avg_ol")) + 
+p1 <- ggplot(ML.dta, aes(x = perind, y = cs_mn_avg_ol)) + 
   geom_point(size=0.05, shape = ".", alpha = 0.5, color = "blueviolet") + 
-  xlab(preds[i]) + ylab("District Achievement Scores") + theme_light()
-}
+  xlab("% Native American Students") + ylab("District Average Test Scores") + theme_light() + geom_smooth(se=F, lwd=0.5, lty=2, method="lm", formula = y~poly(x,1))
 
-#for(i in 1:length(preds)) {
-#   print(p[[i]])
-#}
-    
-            
-ggarrange(plotlist=p, ncol = 2)      
+p2 <- ggplot(ML.dta, aes(x = perasn, y = cs_mn_avg_ol)) + 
+  geom_point(size=0.05, shape = ".", alpha = 0.5, color = "blueviolet") + 
+  xlab("% Asian Students") + ylab("District Average Test Scores") + theme_light() + geom_smooth(se=F, lwd=0.5, lty=2, method="lm", formula = y~poly(x,1))
+
+p3 <- ggplot(ML.dta, aes(x = perhsp, y = cs_mn_avg_ol)) + 
+  geom_point(size=0.05, shape = ".", alpha = 0.5, color = "blueviolet") + 
+  xlab("% Hispanic Students") + ylab("District Average Test Scores") + theme_light() + geom_smooth(se=F, lwd=0.5, lty=2, method="lm", formula = y~poly(x,1))
+
+p4 <- ggplot(ML.dta, aes(x = perblk, y = cs_mn_avg_ol)) + 
+  geom_point(size=0.05, shape = ".", alpha = 0.5, color = "blueviolet") + 
+  xlab("% Black Students") + ylab("District Average Test Scores") + theme_light() + geom_smooth(se=F, lwd=0.5, lty=2, method="lm", formula = y~poly(x,1))
+
+p5 <- ggplot(ML.dta, aes(x = perwht, y = cs_mn_avg_ol)) + 
+  geom_point(size=0.05, shape = ".", alpha = 0.5, color = "blueviolet") + 
+  xlab("% White Students") + ylab("District Average Test Scores") + theme_light() + geom_smooth(se=F, lwd=0.5, lty=2, method="lm", formula = y~poly(x,1))
+
+p6 <- ggplot(ML.dta, aes(x = perfl, y = cs_mn_avg_ol)) + 
+  geom_point(size=0.05, shape = ".", alpha = 0.5, color = "blueviolet") + 
+  xlab("% w/ Free Lunch") + ylab("District Average Test Scores") + theme_light() + geom_smooth(se=F, lwd=0.5, lty=2, method="lm", formula = y~poly(x,1))
+
+p7 <- ggplot(ML.dta, aes(x = perrl, y = cs_mn_avg_ol)) + 
+  geom_point(size=0.05, shape = ".", alpha = 0.5, color = "blueviolet") + 
+  xlab("% w/ Reduced Lunch") + ylab("District Average Test Scores") + theme_light() + geom_smooth(se=F, lwd=0.5, lty=2, method="lm", formula = y~poly(x,1))
+
+p8 <- ggplot(ML.dta, aes(x = perfrl, y = cs_mn_avg_ol)) + 
+  geom_point(size=0.05, shape = ".", alpha = 0.5, color = "blueviolet") + 
+  xlab("% w/ Free/Reduced Lunch") + ylab("District Average Test Scores") + theme_light() + geom_smooth(se=F, lwd=0.5, lty=2, method="lm", formula = y~poly(x,1))
+
+p9 <- ggplot(ML.dta, aes(x = perecd, y = cs_mn_avg_ol)) + 
+  geom_point(size=0.05, shape = ".", alpha = 0.5, color = "blueviolet") + 
+  xlab("% Economically Disadvantaged") + ylab("District Average Test Scores") + theme_light() + geom_smooth(se=F, lwd=0.5, lty=2, method="lm", formula = y~poly(x,1))
+
+p10 <- ggplot(ML.dta, aes(x = perell, y = cs_mn_avg_ol)) + 
+  geom_point(size=0.05, shape = ".", alpha = 0.5, color = "blueviolet") + 
+  xlab("% English Language Learners") + ylab("District Average Test Scores") + theme_light() + geom_smooth(se=F, lwd=0.5, lty=2, method="lm", formula = y~poly(x,1))
+
+p11<- ggplot(ML.dta, aes(x = perspeced, y = cs_mn_avg_ol)) + 
+  geom_point(size=0.05, shape = ".", alpha = 0.5, color = "blueviolet") + 
+  xlab("% Studnets in Special Ed.") + ylab("District Average Test Scores") + theme_light() + geom_smooth(se=F, lwd=0.5, lty=2, method="lm", formula = y~poly(x,1))
+
+p12 <- ggplot(ML.dta, aes(x = totenrl, y = cs_mn_avg_ol)) + 
+  geom_point(size=0.05, shape = ".", alpha = 0.5, color = "blueviolet") + 
+  xlab("# Enrolled in District") + ylab("District Average Test Scores") + theme_light() + geom_smooth(se=F, lwd=0.5, lty=2, method="lm", formula = y~poly(x,1))
+
+p13 <- ggplot(ML.dta, aes(x = sesavgall, y = cs_mn_avg_ol)) + 
+  geom_point(size=0.05, shape = ".", alpha = 0.5, color = "blueviolet") + 
+  xlab("SES Score") + ylab("District Average Test Scores") + theme_light() + geom_smooth(se=F, lwd=0.5, lty=2, method="lm", formula = y~poly(x,1))
+
+p14 <- ggplot(ML.dta, aes(x = lninc50avgall, y = cs_mn_avg_ol)) + 
+  geom_point(size=0.05, shape = ".", alpha = 0.5, color = "blueviolet") + 
+  xlab("Log  Median Income") + ylab("District Average Test Scores") + theme_light() + geom_smooth(se=F, lwd=0.5, lty=2, method="lm", formula = y~poly(x,1))
+
+p15 <- ggplot(ML.dta, aes(x = baplusavgall, y = cs_mn_avg_ol)) + 
+  geom_point(size=0.05, shape = ".", alpha = 0.5, color = "blueviolet") + 
+  xlab("% Adults in District w/ BA") + ylab("District Average Test Scores") + theme_light() + geom_smooth(se=F, lwd=0.5, lty=2, method="lm", formula = y~poly(x,1))
+
+p16 <- ggplot(ML.dta, aes(x = povertyavgall, y = cs_mn_avg_ol)) + 
+  geom_point(size=0.05, shape = ".", alpha = 0.5, color = "blueviolet") + 
+  xlab("Poverty Rate (%)") + ylab("District Average Test Scores") + theme_light() + geom_smooth(se=F, lwd=0.5, lty=2, method="lm", formula = y~poly(x,1))
+
+p17 <- ggplot(ML.dta, aes(x = unempavgall, y = cs_mn_avg_ol)) + 
+  geom_point(size=0.05, shape = ".", alpha = 0.5, color = "blueviolet") + 
+  xlab("Unemployment Rate (%)") + ylab("District Average Test Scores") + theme_light() + geom_smooth(se=F, lwd=0.5, lty=2, method="lm", formula = y~poly(x,1))
+
+p18 <- ggplot(ML.dta, aes(x = snapavgall, y = cs_mn_avg_ol)) + 
+  geom_point(size=0.05, shape = ".", alpha = 0.5, color = "blueviolet") + 
+  xlab("SNAP Rate (%)") + ylab("District Average Test Scores") + theme_light() + geom_smooth(se=F, lwd=0.5, lty=2, method="lm", formula = y~poly(x,1))
+
+p19 <- ggplot(ML.dta, aes(x = single_momavgall, y = cs_mn_avg_ol)) +
+  geom_point(size=0.05, shape = ".", alpha = 0.5, color = "blueviolet") + 
+  xlab("% Students w/ Single Mom") + ylab("District Average Test Scores") + theme_light() + geom_smooth(se=F, lwd=0.5, lty=2, method="lm", formula = y~poly(x,1))
+
+p20 <- ggplot(ML.dta, aes(x = ppexp_tot, y = cs_mn_avg_ol)) + 
+  geom_point(size=0.05, shape = ".", alpha = 0.5, color = "blueviolet") + 
+  xlab("Expenditure Per Pupil (USD)") + ylab("District Average Test Scores") + theme_light() + geom_smooth(se=F, lwd=0.5, lty=2, method="lm", formula = y~poly(x,1))
+
+p21 <- ggplot(ML.dta, aes(x = ppexp_inst, y = cs_mn_avg_ol)) + 
+  geom_point(size=0.05, shape = ".", alpha = 0.5, color = "blueviolet") + 
+  xlab("Instuction Expenditures Per Pupil (USD)") + ylab("District Average Test Scores") + theme_light() + geom_smooth(se=F, lwd=0.5, lty=2, method="lm", formula = y~poly(x,1))
+
+all.predictors.plot <- ggarrange(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15, p16, p17, p18, p19, p20, p21,
+                        nrow = 1, ncol = 3)
 
 ```
+```{r echo=FALSE}
+all.predictors.plot[[1]] 
+all.predictors.plot[[2]]
+all.predictors.plot[[3]]
+all.predictors.plot[[4]]
+all.predictors.plot[[5]]
+all.predictors.plot[[6]]
+all.predictors.plot[[7]]
+
+```
+
+
 For the binary predictor (`urban`  suburb, town, rural), we can use a box plot:
 
-```{r eval=FALSE, include=FALSE}
+```{r echo=TRUE}
+
+boxplot.dta <- ML.dta %>% mutate(locale = 
+                                   case_when(urban == 1 ~ "Urban", 
+                                             suburb == 1 ~ "Suburban",
+                                             town == 1 ~ "Town",
+                                             rural == 1 ~ "Rural"))
+
+ggplot(boxplot.dta, aes(locale, cs_mn_avg_ol, group = locale)) + 
+  geom_boxplot(fill = "cyan2", outlier.color = "black", outlier.fill = "cyan2", outlier.shape = 21) + labs(x = "District Locale", y = "District Average Test Scores") + theme_light()
 
 ```
 
@@ -409,13 +452,15 @@ round(cor(dplyr::select(dat, cs_mn_avg_ol, unempavgall, povertyavgall, sesavgall
 
 After seeing the descriptive statistics of each variable, we plot histograms of unemployment, SES scores, poverty, and average academic achievement to display the distribution of each variable. SES is measured as "sesavgall" which is the SES composite score for all families in the district between 2005-2009 and 2014. "povertyavgall" represents the poverty rate (eb estimate) of all families in the district between 2005-2009 and 2014 and the "unempavgall" represents the unemployment rate (eb estimate) of all families in the district between 2005-2009 and 2014. We create histogram and annotate them with the means and standard deviations of each variable. We see that poverty, academic achievement, and SES all have wider spreads of variation and the distribution of unemployment seems to be more narrow. 
 
+**Explain more how these scores are interpreted (ie. zero = average national SES)**
+
 ```{r pressure, echo=TRUE}
 # How much variation is there in average academic achievement?
 ggplot(aes(x=cs_mn_avg_ol), data = dat) +
   geom_histogram(color="black", fill="cyan2", binwidth = 0.05) +
   annotate("text", x=-1.8, y=750, label = "Mean=0.021, SD=0.33",
            size=5, hjust=0, vjust=0) +
-  xlab("Average Test Scores (Grade 5.5, CS Scale)") +
+  xlab("District Academic Achievment (Test Scores)") +
   ylab("Frequency") +
   theme_classic()
 
@@ -462,9 +507,9 @@ ggplot(aes(x=unempavgall, y=cs_mn_avg_ol), data = dat) +
            label = paste0("r=",r1)) +
   scale_size(range = c(1,30)) +
   guides(size="none") +
-  ggtitle("What is the association between Unemployment and average academic achievement?") +
+  ggtitle("Association Between Unemployment and Average Academic Achievement") + theme_light() +
   xlab("Average Unemployment") +
-  ylab("Average Test Scores (Grade 5.5, CS Scale)")
+  ylab("District Academic Achievment (Test Scores)")
 
 # What is the association between poverty and average academic achievement?
 r2 <- round(cor(dat$cs_mn_avg_ol, dat$povertyavgall),2)
@@ -475,9 +520,9 @@ ggplot(aes(x=povertyavgall, y=cs_mn_avg_ol), data = dat) +
            label = paste0("r=",r2)) +
   scale_size(range = c(1,30)) +
   guides(size="none") +
-  ggtitle("What is the association between poverty and average academic achievement?") +
+  ggtitle("Association Between Poverty and Average Academic Achievement") + theme_light() +
   xlab("Average Poverty") +
-  ylab("Average Test Scores (Grade 5.5, CS Scale)")
+  ylab("District Academic Achievment (Test Scores)")
 
 # What is the association between SES and average academic achievement?
 r3 <- round(cor(dat$cs_mn_avg_ol, dat$sesavgall),2)
@@ -488,9 +533,9 @@ ggplot(aes(x=sesavgall, y=cs_mn_avg_ol), data = dat) +
            label = paste0("r=",r3)) +
   scale_size(range = c(1,30)) +
   guides(size=FALSE) +
-  ggtitle("What is the association between SES and average academic achievement?") +
+  ggtitle("Association Between SES and Average Academic Achievement") + theme_light() +
   xlab("Average SES") +
-  ylab("Average Test Scores (Grade 5.5, CS Scale)")
+  ylab("District Academic Achievment (Test Scores)")
 
 ```
 
@@ -498,14 +543,6 @@ ggplot(aes(x=sesavgall, y=cs_mn_avg_ol), data = dat) +
 ## Unemployment and Average Academic Achievement 
 
 First, we create boxplots to display the range of the median unemployment rates between all 50 states. Here, we observe that South Dakota has the lowest unemployment rate and Mississippi has one of the highest unemployment rates (excluding DC). Then, Montana seems to have similar unemployment rates compared to Massachusetts. We note this to plot four states that we can compare in terms of their unemployment-academic achievement gradient. 
-
-Next, we found that according to the [Bureau of Labor Statistics](https://www.bls.gov/web/laus/laumstrk.htm), Nebraska has the lowest unemployment rate as of September 2021 at 2.0. Washington and Massachusetts have very similar unemployment rates of 4.9 and 5.2, respectively. Lastly, California has the highest unemployment rate of 7.5. Therefore, we also specifically look at the differences in the unemployment-achievement gradient between Nebraska, Washington, Massachusetts, and California. To start off, we plot the boxplots of unemployment rates for the four states and note the differences in their medians. 
-
-Then, in one of our final plots titled "How does the Unemployment-Achievement gradient differ in WA, MA, NE, and CA?", we notice that CA has a huge range of unemployment rates with the line stretching wide into higher unemployment scores. Meanwhile, the line for Nebraska has a range that stretches into the low unemployment rates. We see that all four lines have negative slopes with higher unemployment rates with lower scores of academic achievement and lower unemployment rates with higher scores of academic achievement. However, when comparing between states, the two lines for CA and NE seem to have very similar slopes that overlap with one another. Massachusetts and Washington have similar ranges of unemployment rates but the line is overall at a higher level. Districts in MA display higher average academic achievement scores in standard deviation units (relative to the national mean) overall compared to CA, NE, and WA.
-
-Finally, in the last plot labeled "How does the Unemployment-Achievement gradient differ in MS, MA, SD, and MT?", we also plot the gradients for the four states of Massachusetts, Montana, South Dakota, and Mississippi specified earlier. Here, we notice that South Dakota has a wide range of unemployment rates that stretch into lower numbers. MT and SD seem to have similar slopes while MS has a slope that is closer to zero. The unemployment-achievement gradient slope seems to be highest in magnitude (most negative) for MA but again, we notice that the average academic achievement scores are higher overall at all unemployment rates compared to all other states. 
-
-We note that there are several flaws in solely using unemployment as a covariate. We believe that there could be additional variation happening that is not just coming from unemployment. For further analyses, we can look at additional covariates of interest that may impact academic achievement such as income earned, % of students receiving free lunch, poverty levels, environmental factors, housing, and social policies. We also ask why Massachusetts has significantly higher scores of academic achievement at every level of unemployment compared to several other states. Perhaps this can be due to the educational system and policies in MA and/or the different programs available to school districts in Massachusetts. Other variables that may impact the academic performance of students in each state include family environments (such as domestic violence and abuse), racism, and other economic and social measures.
 
 ```{r}
 # The unemployment distribution between all 50 states ordered by the median
@@ -519,10 +556,14 @@ p_unempdist <- dat %>%
   theme(axis.text.x = element_text(angle = 90, hjust = 0.5, size = 7)) +
   ggtitle("Distribution of Unemployment rates for each state") +
   xlab("States") +
-  ylab("Unemployment Rate")
+  ylab("Unemployment Rate") + theme_light()
 p_unempdist
 
+```
 
+Next, we found that according to the [Bureau of Labor Statistics](https://www.bls.gov/web/laus/laumstrk.htm), Nebraska has the lowest unemployment rate as of September 2021 at 2.0. Washington and Massachusetts have very similar unemployment rates of 4.9 and 5.2, respectively. Lastly, California has the highest unemployment rate of 7.5. Therefore, we also specifically look at the differences in the unemployment-achievement gradient between Nebraska, Washington, Massachusetts, and California. To start off, we plot the boxplots of unemployment rates for the four states and note the differences in their medians. 
+
+```{r}
 # The unemployment distribution between WA vs. MA vs. NE vs. CA
 dat %>%
   filter(stateabb == "WA" | stateabb == "MA" | stateabb == "NE" | stateabb == "CA") %>% 
@@ -531,9 +572,15 @@ dat %>%
   scale_y_continuous(trans = "sqrt") +
   xlab("") + 
   ylab("Unemployment") +
-  theme(legend.position ="none")
+  theme(legend.position ="none") + theme_light()
+```
 
+Then, in one of our final plots titled "How does the Unemployment-Achievement gradient differ in WA, MA, NE, and CA?", we notice that CA has a huge range of unemployment rates with the line stretching wide into higher unemployment scores. Meanwhile, the line for Nebraska has a range that stretches into the low unemployment rates. We see that all four lines have negative slopes with higher unemployment rates with lower scores of academic achievement and lower unemployment rates with higher scores of academic achievement. However, when comparing between states, the two lines for CA and NE seem to have very similar slopes that overlap with one another. Massachusetts and Washington have similar ranges of unemployment rates but the line is overall at a higher level. Districts in MA display higher average academic achievement scores in standard deviation units (relative to the national mean) overall compared to CA, NE, and WA.
+
+```{r}
 # How does the unemployment gradient compare in WA vs. MA vs. NE vs. CA?
+
+#Filtering the data set to only include WA, MA, NE, CA
 dat_wa_ma_ne_ca <- filter(dat, stateabb %in% c("WA","MA", "NE", "CA"))
 
 ggplot(aes(x=unempavgall, y=cs_mn_avg_ol), data = dat) +
@@ -545,10 +592,9 @@ ggplot(aes(x=unempavgall, y=cs_mn_avg_ol), data = dat) +
   scale_size(range = c(1,30)) +
   guides(size="none", color="none") +
   labs(fill = "State") +
-  ggtitle("Unemployment-achievement points in WA, MA, NE, and CA?") +
+  ggtitle("Academic Achievementy by Unemployment Rates", subtitle = "Comparing the relationships in WA, MA, NE, and CA") +
   xlab("Average Unemployment") +
-  ylab("Average Test Scores (Grade 5.5, CS Scale)")
-
+  ylab("District Academic Achievment (Test Scores)") + theme_light()
 
 ggplot(aes(x=unempavgall, y=cs_mn_avg_ol), data = dat) +
   geom_point(alpha=0.04, pch=21, color="black", aes(size=totenrl, fill=stateabb),
@@ -557,11 +603,15 @@ ggplot(aes(x=unempavgall, y=cs_mn_avg_ol), data = dat) +
   scale_size(range = c(1,30)) +
   geom_smooth(se=F, lwd=1, lty=1, method="lm", aes(color=stateabb), formula = y~x,
               data = dat_wa_ma_ne_ca) +
-  ggtitle("How does the Unemployment-Achievement gradient differ in WA, MA, NE, and CA?") +
+  ggtitle("Academic Achievementy by Unemployment Rates", subtitle = "WA, MA, NE, and CA") +
   xlab("Average Unemployment") +
-  ylab("Average Test Scores (Grade 5.5, CS Scale)") +
-  labs(color = "State")
+  ylab("District Academic Achievment (Test Scores)") +
+  labs(color = "State") + theme_light()
+```
 
+Finally, we also plot the gradients for the four states of Massachusetts, Montana, South Dakota, and Mississippi specified earlier. Here, we notice that South Dakota has a wide range of unemployment rates that stretch into lower numbers. MT and SD seem to have similar slopes while MS has a slope that is closer to zero. The unemployment-achievement gradient slope seems to be highest in magnitude (most negative) for MA but again, we notice that the average academic achievement scores are higher overall at all unemployment rates compared to all other states. 
+
+```{r}
 # How does the unemployment gradient compare in MS vs. MA vs. SD vs. MT?
 dat_ms_ma_sd_mt <- filter(dat, stateabb %in% c("MS","MA", "SD", "MT"))
 
@@ -573,15 +623,17 @@ dat_ms_ma_sd_mt <- filter(dat, stateabb %in% c("MS","MA", "SD", "MT"))
               data = dat_ms_ma_sd_mt) +
   ggtitle("How does the Unemployment-Achievement gradient differ in MS, MA, SD, and MT?") +
   xlab("Average Unemployment") +
-  ylab("Average Test Scores (Grade 5.5, CS Scale)") +
-  labs(color = "State")
+  ylab("District Academic Achievment (Test Scores)") +
+  labs(color = "State") + theme_light()
 ```
+
+
+We note that there are several flaws in solely using unemployment as a covariate. We believe that there could be additional variation happening that is not just coming from unemployment. For further analyses, we can look at additional covariates of interest that may impact academic achievement such as income earned, % of students receiving free lunch, poverty levels, environmental factors, housing, and social policies. We also ask why Massachusetts has significantly higher scores of academic achievement at every level of unemployment compared to several other states. Perhaps this can be due to the educational system and policies in MA and/or the different programs available to school districts in Massachusetts. Other variables that may impact the academic performance of students in each state include family environments (such as domestic violence and abuse), racism, and other economic and social measures.
 
 ## Is this relationship specific to unemployment and academic achievement?
 
 Furthermore, we chose to plot the academic achievement by SES composite scores for MA and WA to observe whether we will observe a difference in the relationship between SES and academic achievement and the relationship between unemployment and academic achievement. We see that there are some differences in the range and the gradient. By simply looking at the points, we notice that Massachusetts and Washington generally overlap in their relationships but MA does seem to have slightly higher levels of SES. 
 
-Massachusetts and Washington may have similar unemployment rates but may look different on other scales such as housing or poverty or income levels. Therefore, we want to consider other covariates, such as % of free lunch, an indicator that our previous regression tree included as a predictor. We saw that the random forest and decision tree model mentioned earlier concludes that percent of students receiving free lunch has high priority in influencing academic achievement. 
 
 ```{r}
 # How does the SES gradient compare in WA vs. MA?
@@ -598,11 +650,11 @@ ggplot(aes(x=sesavgall, y=cs_mn_avg_ol), data = dat) +
   labs(fill = "State") +
   ggtitle("How does the SES-achievement gradient differ in WA and MA?") +
   xlab("Average SES") +
-  ylab("Average Test Scores (Grade 5.5, CS Scale)")
+  ylab("District Academic Achievment (Test Scores)") + theme_light()
 
 ```
 
-*Next we further explore the relationship between academic achievement and socioecnomic factors by looking at the percent of students receiving free lunch_____ please continue on from here! hwaiting ye eun!*
+Massachusetts and Washington may have similar unemployment rates but may look different on other scales such as housing or poverty or income levels. Therefore, we want to consider other covariates, such as % of free lunch, an indicator that our previous regression tree included as a predictor. We saw that the random forest model mentioned earlier concludes that percent of students receiving free lunch has high priority in influencing academic achievement. 
 
 
 ## School-Related Food-Assistance Programs and Average Academic Achievement 
