@@ -19,7 +19,7 @@ In this repository you can explore our final project.
 ### For the graphs please add this theme:  
   - `+ theme_light()`
 
-### Naming your the Rmarkdowns (for ease of TA's grading):  
+### Naming your the Rmarkdowns and associated files (for ease of TA's grading):  
   -  Part1.1_MachineLearning.Rmd (or all of Part1 together everything together, Part1.Rmd)
   - Part1.2_ ... etc. 
 
