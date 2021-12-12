@@ -1,6 +1,11 @@
 # BST 260 Project: Team Po-Data Science
 
-In this repository you can explore our final project. 
+## Guide for Readers
+### You will need (to download separately from GitHub):
+- **[https://stacks.stanford.edu/file/druid:db586ns4974/codebook_covariates_v1_1.xlsx](https://stacks.stanford.edu/file/druid:db586ns4974/codebook_covariates_v1_1.xlsx)** - input data from Stanford Education Data Archive (SEDA)  
+
+## Read more about this project below:
+#### Overview and Motivation: Provide an overview of the project goals and the motivation for it. Consider that this will be read by people who did not see your project proposal.
 
 # **Hey group mates!!!**  
 
