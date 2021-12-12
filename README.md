@@ -4,7 +4,7 @@ In this repository you can explore our final project.
 
 # **Hey group mates!!!**  
 
-- Delete all of the below after everyone is done & replace with the actual Project ReadMe.md
+- Delete all of the below after everyone is done to replace with the actual Project ReadMe.md
 
 ### For the html knitting settings, please copy this in the upper header:
 - [Image of what it looks like in the Rmd](https://raw.githubusercontent.com/Po-Data-Science-Project/SEDA-Maps/main/Screen%20Shot%202021-12-12%20at%207.40.32%20AM.png?token=AVNFGN32C3QOFCDAX2SUS3LBWXXDO)
