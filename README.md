@@ -4,8 +4,6 @@
 ### You will need (to download separately from GitHub):
 - **[https://stacks.stanford.edu/file/druid:db586ns4974/codebook_covariates_v1_1.xlsx](https://stacks.stanford.edu/file/druid:db586ns4974/codebook_covariates_v1_1.xlsx)** - input data from Stanford Education Data Archive (SEDA)  
 
-<br>
-
 ---
 
 #### Overview and Motivation
