@@ -23,7 +23,7 @@ In this repository you can explore our final project.
   - `+ theme_light()`
 
 ### Naming your the Rmarkdowns and associated files (for ease of TA's grading):  
-  -  Part1.1_MachineLearning.Rmd (or all of Part1 together everything together, Part1.Rmd)
+  -  Part1.1_MachineLearning.Rmd (or if all of Part1 is in one RMarkdown: Part1.Rmd)
   - Part1.2_ ... etc. 
 
 ### For updating the website: [github repo linked here](https://github.com/amesluo/amesluo.github.io)
