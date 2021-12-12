@@ -56,7 +56,7 @@ Throughout this RMarkdown, we will discuss in depth how our though process surro
 In our project, we use the SEDA dataset that maps student achievement based on different district level covariates. The [Educational Opportunity Project at Stanford University](https://edopportunity.org/) measures educational opportunity in diverse communities all over America. We downloaded the files from the publicly available datasets that the SEDA project has online [here](https://exhibits.stanford.edu/data/catalog/db586ns4974). For information on academic achievement, we downloaded `"seda_geodist_pool_cs_4.0"`, which includes data pooled 
 
 We use the inner join function to join the achievement scores dataset and the covariates dataset.
-
+ 
 ```{r}
 # Load achievement data (district, CS, pooled) 
 # data obtained from: "https://stacks.stanford.edu/file/druid:db586ns4974/seda_geodist_pool_cs_4.0.dta"
