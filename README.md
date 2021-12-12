@@ -43,8 +43,8 @@ To look at how spending on education varies by political leaning within each con
 #### Analysis
 Analyses can be found in two parts:  
 
-- Part I: can be in the top tab
-- Part II: can be found in the to tab
+- Part I: Predictors of Academic Acheivement 
+- Part II: Political Ideology & Educational Spending
 
 # **Hey group mates!!!**  
 
