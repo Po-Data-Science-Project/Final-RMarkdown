@@ -42,7 +42,7 @@ In this repository you can explore our final project.
 
 *Now, how do I get my source URL?*  
 1. In folder \"_images", you can directly upload your screenshots in github!
-2. After uploading in the \"images" folder, [click on the image and drag it to a new tab](https://raw.githubusercontent.com/Po-Data-Science-Project/SEDA-Maps/main/Screen%20Shot%202021-12-12%20at%207.56.41%20AM.png?token=AVNFGNYJTAXC35PTJRNGQVTBWXZC6)
-3. Copy the URL of the new tab with only the image in it, [that is the **source URL**](https://raw.githubusercontent.com/Po-Data-Science-Project/SEDA-Maps/main/Screen%20Shot%202021-12-12%20at%207.54.42%20AM.png?token=AVNFGNY2ZAEACK75VBGP3X3BWXZCW)
+2. After uploading in the \"images" folder, [click on the image and drag it to a new tab](https://raw.githubusercontent.com/Po-Data-Science-Project/SEDA-Maps/main/Screen%20Shot%202021-12-12%20at%207.54.42%20AM.png?token=AVNFGNY2ZAEACK75VBGP3X3BWXZCW)
+3. Copy the URL of the new tab with only the image in it, [that is the **source URL**](https://raw.githubusercontent.com/Po-Data-Science-Project/SEDA-Maps/main/Screen%20Shot%202021-12-12%20at%207.56.41%20AM.png?token=AVNFGNYJTAXC35PTJRNGQVTBWXZC6)
 4. Insert into the code above ^, and the webpage will now have your image in it (yay!)
 
