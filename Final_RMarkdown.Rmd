@@ -30,7 +30,7 @@ library(tidyverse)
 library(stargazer)
 library(ggpubr)
 ```
-
+ 
 
 ## Overview and Motivation
 There is no denying the importance of education. At the individual level, a strong education is important for personal growth, acquiring knowledge, and developing critical thinking skills. At the societal level, educational outcomes are highly correlated to better health and higher earnings. However, in the United States, there are many factors that can influence the quality of education and students' educational success. Understanding how these socioeconomic and political factors affect academic achievement outcomes can better inform future educational policies and programs. 
@@ -56,7 +56,7 @@ Throughout this RMarkdown, we will discuss in depth how our though process surro
 In our project, we use the SEDA dataset that maps student achievement based on different district level covariates. The [Educational Opportunity Project at Stanford University](https://edopportunity.org/) measures educational opportunity in diverse communities all over America. We downloaded the files from the publicly available datasets that the SEDA project has online [here](https://exhibits.stanford.edu/data/catalog/db586ns4974). For information on academic achievement, we downloaded `"seda_geodist_pool_cs_4.0"`, which includes data pooled 
 
 We use the inner join function to join the achievement scores dataset and the covariates dataset.
- 
+  
 ```{r}
 # Load achievement data (district, CS, pooled) 
 # data obtained from: "https://stacks.stanford.edu/file/druid:db586ns4974/seda_geodist_pool_cs_4.0.dta"
