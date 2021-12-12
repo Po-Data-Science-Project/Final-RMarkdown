@@ -1,5 +1,5 @@
 ---
-title: "Predicting District School Funding and Educational Outcomes"
+title: "Part 1: Predicting District Academic Achievement"
 author: "Team Po-Data Science: Amy Luo, Austin Tucker, Han Choi, Juliet McCann, Yeeun Lee"
 date: "December 2021"
 output:
@@ -37,7 +37,10 @@ There is no denying the importance of education. At the individual level, a stro
 
 Our group was inspired to pursue this project after many of us took a statistics course at Harvard Graduate School of Education during the Spring of 2021. For this class we often applied the methods we were learning to data from The Education Opportunity Project at Stanford University. This dataset, referred to as the Stanford Education Data Archive (SEDA) provides detailed information on educational outcomes by various levels (school, district, county, community, and state). We were motivated to use this first national database of academic performance to ask questions about predictors of academic achievement and school funding between states and at the national level. 
 
-In this section of the project (Part 1) we are specifically aiming to answer the following questions:
+In the first part of our project (Part 1), we aim to understand the variables that predict academic achievement on a district level. This section of our project has three components. First, we will use exploratory data analysis and machine learning modeling to determine key predictors of academic achievement on which to focus. Next we will take a closer look at socio-economic status, unemployment, and poverty as predictors of academic achievement, using Washington and Massachusetts as case studies. Finally, we will explore how receiving free lunch at school predicts academic success.
+
+
+To summarize: we are specifically aiming to answer the following questions:
 
 - What are some of the most important predictors of academic achievement at the national level?
 
@@ -47,14 +50,12 @@ In this section of the project (Part 1) we are specifically aiming to answer the
 
 Throughout this RMarkdown, we will discuss in depth how our though process surrounding these questions were developed and how they evolved throughout the course of the project. To summarize, the results of exploratory data analysis and machine learning models helped to inform areas of focus in our project.
 
-## Part 1: Predicting District Academic Achievement
-
-In the first part of our project, we aim to understand the variables that predict academic achievement on a district level. This section of our project has three components. First, we will use exploratory data analysis and machine learning modeling to determine key predictors of academic achievement on which to focus. Next we will take a closer look at some socio-economic status, unemployment, and poverty as predictors of academic achievement, using Washington and Massachusetts as case studies. Finally, we will explore how receiving free lunch at school predicts academic success. 
-
 
 ### Data Source:
 
-In our project, we use the SEDA dataset that maps student achievement based on different district level covariates. The [Educational Opportunity Project at Stanford University](https://edopportunity.org/) measures educational opportunity in diverse communities all over America. We loaded the file from the publicly available datasets that the SEDA project has online [here](https://exhibits.stanford.edu/data/catalog/db586ns4974) We use the inner join function to join the achievement scores dataset and the covariates dataset.
+In our project, we use the SEDA dataset that maps student achievement based on different district level covariates. The [Educational Opportunity Project at Stanford University](https://edopportunity.org/) measures educational opportunity in diverse communities all over America. We downloaded the files from the publicly available datasets that the SEDA project has online [here](https://exhibits.stanford.edu/data/catalog/db586ns4974). For information on academic achievement, we downloaded `"seda_geodist_pool_cs_4.0"`, which includes data pooled 
+
+We use the inner join function to join the achievement scores dataset and the covariates dataset.
 
 ```{r}
 # Load achievement data (district, CS, pooled) 
@@ -83,12 +84,10 @@ dat <- filter(dat,
               !is.na(unempavgall),
               !is.na(povertyavgall),
               !is.na(sesavgall))
-nrow(dat)
-
 
 ```
 
-After creating this data set, we noticed that the covariate data set that we used did not include variables related to district spending. This is an area of interest of our team, as it shows how policies and funding can play a round in academic outcomes. Therefore, obtained an additional SEDA dataset with district spending included and merged this with the data set above. 
+After creating this data set, we noticed that the covariate data that we used above does not include variables related to district spending. This is an area of interest of our team that will be explored further in Part 2. Therefore, we obtained an additional SEDA dataset that had district spending included and merged this with the data set above. 
 
 
 ```{r}
@@ -120,8 +119,14 @@ class(spending$sedalea)
 
 # Merge files together. This keeps only matched districts.
 dat <- inner_join(dat, spending, by = c("sedalea", "fips"))
+
+#determining the final # observations and # variables in dataset
+ncol(dat)
+nrow(dat)
+
 ```
 
+Now we have a dataset to work with on our analysis that includes all of our variables of interest. This dataset includes 85 variables on 12438 districts.
 
 ### Part 1a: Deciding the predictors of interest
 
