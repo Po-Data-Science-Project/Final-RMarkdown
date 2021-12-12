@@ -33,9 +33,9 @@ In this repository you can explore our final project.
   4. To get empty line breaks between sections, the code is `<br>`
   5. To insert graph pictures, the code is:  
 
-\<p align="center" width="100%">  
-    \<img width=" **some percentage (i.e. 80%)** " src=" **your source URL here** ">  
-\</p>  
+`\<p align="center" width="100%">`  
+    `\<img width=" **some percentage (i.e. 80%)** " src=" **your source URL here** ">`  
+`\</p>`  
 
    - You can play around with the width percentage to optimize how big you want your image to be  
 
