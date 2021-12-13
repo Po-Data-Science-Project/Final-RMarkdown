@@ -405,4 +405,6 @@ shinyApp(ui, server)
 summary(linear_mod_full)
 ```
 
+# Analysis
 
+We can see from our visualizations and the adjusted regression model that the relationships between our covariates of interest and achievement scores change when we adjust for other explanatory variables in the model. Some relationships persist, such as the percentage of students receiving free or reduced lunch; however, for other covariates, such as the percentage of women 25-64 in the workforce, much of the variation is explained by these other covariates, such that a strong positive relationship no longer exists. Looking at these adjusted relationships here may help to better inform which are the most important relationships to target. However, it's important to note that these relationships are still correlations and not causal in nature. More research should of course be done to better tease out the causal direction of student test performance. 
