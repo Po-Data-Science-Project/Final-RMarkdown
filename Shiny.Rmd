@@ -1,0 +1,408 @@
+---
+title: "School Achievement Visualization Tool"
+author: "Austin Tucker"
+date: "12/12/2021"
+output: html_document
+runtime: shiny
+---
+## Motivation:
+
+The current SEDA data set has a visualization tool; however, it only highlights the relationship between achievement outcomes and one covariate, average socioeconomic status for the region. As such, we thought it might be useful to build a flexible visualization tool that's capable of showing the relationship between other covariates included in the SEDA data. Furthermore, we wanted to provide an option to visualize this relationship adjusted for other covariates of interest that might be confounding the relationship, so we incorporated an option to visualize the adjusted relationship using regression of two model residuals described below. 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+## Load Packages:
+```{r}
+library(haven)
+library(ggplot2)
+library(dplyr)
+library(kableExtra)
+library(tidyverse)
+library(missForest)
+```
+## Input Data:
+```{r}
+#seda_dta <- read_dta("seda_geodist_pool_cs_4.0.dta")
+#cov_dta <- read_dta
+#cov_dta$sedalea <- cov_dta$leaid
+#class(cov_dta$sedalea)
+#class(seda_dta$sedalea)
+
+#cov_dta$sedalea <- as.numeric(cov_dta$sedalea)
+#class(cov_dta$sedalea)
+
+#full_dta <- inner_join(seda_dta, cov_dta, by = c("sedalea","fips"))
+
+#full_dta <- filter(full_dta,
+ #                  subgroup == "all",
+  #                 !is.na(cs_mn_avg_ol))
+
+#nrow(full_dta)
+#ncol(full_dta)
+
+#Subset data to all data included in the ML exercise
+
+#data_subset <- subset(full_dta, select = c(urban , avgrdall, perfrl, perell, perspeced, nsch, aides, corsup, elmgui, stutch_all, ppexp_tot, ppexp_inst, pprev_tot, baplus_all, poverty517_all, singmom_all, snap_all, samehouse_all, unemp_all, inlf_fem, teenbirth_all, sesall, cs_mn_avg_ol))
+
+###Impute missing values using the same method for the ML exercise using missForest
+
+#data_subset_impute <- missForest(as.matrix(data_subset))
+
+#data_subset_impute <- as.data.frame(data_subset_impute$ximp)
+
+#Going to subset this data again based on the 10 most important predictors by the Gini values from our Random Forest model and unemployment since it was included in our unemployment analysis, percentage of household receiving snap benefits and percentage of free lunch in the grade were already included.
+
+#data_subset_final <- subset(data_subset_impute, select = c(cs_mn_avg_ol,perfrl, baplus_all, sesall, singmom_all, snap_all, corsup, elmgui, inlf_fem, perell, ppexp_tot,unemp_all))
+
+#Writing this as a csv for future use
+
+#write.csv(data_subset_final, "shiny_data_subset_final.csv", row.names =FALSE)
+
+data_subset_final <- read.csv("shiny_data_subset_final.csv")
+```
+
+# Plotting relationships between covariates:
+
+We are interested in plotting the relationships between the variables identified as most important in our Random Forest analysis in addition to unemployment which was a major focus of another analysis with our achievement score outcome, the District test-based achievement math and reading scores from ordinary least quares estimate. 
+
+First, we would like to visualize these relationships as simple univariate regressions. This is quite simple to do and we will show an example below:
+
+
+```{r, message = FALSE, echo = FALSE, warning = FALSE}
+linear_mod_perfrl <- lm(cs_mn_avg_ol ~ perfrl, data = data_subset_final)
+summary(linear_mod_perfrl)
+
+#Plot the linear relationship with the linear model relationship
+ggplot(data = data_subset_final, aes(x = perfrl, y = cs_mn_avg_ol)) + geom_point(size = 0.5, alpha = 0.5, color = "blueviolet") +
+  geom_smooth(lwd = 1, lty = 2, color = "black", method = "lm") + 
+  theme_light() +
+  labs(x = "Percent Free Lunch", y = "District Average Achievement Score") +
+  ggtitle("District Average Achievement Score vs. District Percent Free Lunch") +
+  theme(plot.title = element_text(size = 12),
+        axis.title.x = element_text(size = 12),
+        axis.title.y = element_text(size = 12))
+
+
+```
+
+We can see a strong negative linear relationship between percentage of students eligible for free lunch in the district and the achievement scores. However, we might be concerned that this relationship is confounded by some of our other variables of interest, and we may want to visualize this relationship. However, trying to visualize this linear relationship becomes difficult after adjusting for covariates. If we run a regression with a full adjusted model, we can see that the coefficient on the percent free lunch variable changes from -1.31 above to -0.78:
+
+```{r, warning = FALSE}
+linear_mod_full <- lm(cs_mn_avg_ol ~ ., data = data_subset_final)
+summary(linear_mod_full)
+```
+## Adjusted visualization: 
+
+Visualizing this new relationship is difficult to do in two dimensions, but we can use regression anatomy through the Frisch-Waugh-Lovell theorem that allows for us to visualize this adjusted linear relationship using the residuals from the full model between achievement score and our covariates, not including our covariate of interest (in this case percent free lunch), and a second model where percent free lunch is the outcome of interest and it's regressed on the other covariates. This looks as follows:
+
+```{r, warning = FALSE}
+#First run a regression with the outcome of interest and the rest of the covariates not including the covariate of interest
+m1_perfrl <- lm(cs_mn_avg_ol ~ . - perfrl, data = data_subset_final)
+#Next run a regerssion with the covariate of interest as the outcome regressed on the other independent variables
+m2_perfrl <- lm(perfrl ~ . - cs_mn_avg_ol, data = data_subset_final)
+#Save the residuals of both regressions
+resid1_perfrl <- residuals(m1_perfrl)
+resid2_perfrl <- residuals(m2_perfrl)
+#Run a third model from the residuals of the previous two models
+m3_perfrl <- lm(resid1_perfrl ~ resid2_perfrl)
+summary(m3_perfrl)
+```
+
+As we can see, when we run the regression with the residuals we obtain the same beta coefficient for percent free lunch as we did in the larger adjusted regression model. Now we can visualize this adjusted relationship using the residuals of the two models:
+
+```{r, message = FALSE, warning = FALSE}
+#Plot the residuals
+perfrl_vis <- as.data.frame(cbind(resid1_perfrl, resid2_perfrl))
+
+perfrl_plot <- ggplot(data = perfrl_vis, aes(x = resid2_perfrl, y = resid1_perfrl)) + geom_point(size = 0.5, alpha = 0.5, color = "blueviolet") +
+  geom_smooth(lwd = 1, lty = 2, color = "black", method = "lm") + 
+  theme_light() +
+  labs(x = "Percent Free Lunch (Residualized)", y = "District Average Achievement Score (Residualized)") +
+  ggtitle("District Average Achievement Score vs. District Percent Free Lunch") +
+  theme(plot.title = element_text(size = 12),
+        axis.title.x = element_text(size = 12),
+        axis.title.y = element_text(size = 12))
+
+
+perfrl_plot
+```
+
+In order to simplify our data referencing for our Shiny App, we're going to create a second data frame with these model residuals. 
+```{r, message = FALSE, warning = FALSE}
+#Repeat this residual dataframe process
+m1_perfrl <- lm(cs_mn_avg_ol ~ . - perfrl, data = data_subset_final)
+m2_perfrl <- lm(perfrl ~ . - cs_mn_avg_ol, data = data_subset_final)
+residy_perfrl <- residuals(m1_perfrl)
+residx_perfrl <- residuals(m2_perfrl)
+
+m1_baplus_all <- lm(cs_mn_avg_ol ~ . - baplus_all, data = data_subset_final)
+m2_baplus_all <- lm(baplus_all ~ . - cs_mn_avg_ol, data = data_subset_final)
+residy_baplus_all <- residuals(m1_baplus_all)
+residx_baplus_all <- residuals(m2_baplus_all)
+
+m1_sesall <- lm(cs_mn_avg_ol ~ . - sesall, data = data_subset_final)
+m2_sesall <- lm(sesall ~ . - cs_mn_avg_ol, data = data_subset_final)
+residy_sesall <- residuals(m1_sesall)
+residx_sesall <- residuals(m2_sesall)
+
+m1_singmom_all <- lm(cs_mn_avg_ol ~ . - perfrl, data = data_subset_final)
+m2_singmom_all <- lm(perfrl ~ . - cs_mn_avg_ol, data = data_subset_final)
+residy_singmom_all <- residuals(m1_singmom_all)
+residx_singmom_all <- residuals(m2_singmom_all)
+
+m1_snap_all <- lm(cs_mn_avg_ol ~ . - snap_all, data = data_subset_final)
+m2_snap_all <- lm(snap_all ~ . - cs_mn_avg_ol, data = data_subset_final)
+residy_snap_all <- residuals(m1_snap_all)
+residx_snap_all <- residuals(m2_snap_all)
+
+m1_corsup <- lm(cs_mn_avg_ol ~ . - corsup, data = data_subset_final)
+m2_corsup <- lm(corsup ~ . - cs_mn_avg_ol, data = data_subset_final)
+residy_corsup <- residuals(m1_corsup)
+residx_corsup <- residuals(m2_corsup)
+
+m1_elmgui <- lm(cs_mn_avg_ol ~ . - elmgui, data = data_subset_final)
+m2_elmgui <- lm(elmgui ~ . - cs_mn_avg_ol, data = data_subset_final)
+residy_elmgui <- residuals(m1_elmgui)
+residx_elmgui <- residuals(m2_elmgui)
+
+m1_inlf_fem <- lm(cs_mn_avg_ol ~ . - inlf_fem, data = data_subset_final)
+m2_inlf_fem <- lm(inlf_fem ~ . - cs_mn_avg_ol, data = data_subset_final)
+residy_inlf_fem <- residuals(m1_inlf_fem)
+residx_inlf_fem <- residuals(m2_inlf_fem)
+
+m1_perell <- lm(cs_mn_avg_ol ~ . - perell, data = data_subset_final)
+m2_perell <- lm(perell ~ . - cs_mn_avg_ol, data = data_subset_final)
+residy_perell <- residuals(m1_perell)
+residx_perell <- residuals(m2_perell)
+
+m1_ppexp_tot <- lm(cs_mn_avg_ol ~ . - ppexp_tot, data = data_subset_final)
+m2_ppexp_tot <- lm(ppexp_tot ~ . - cs_mn_avg_ol, data = data_subset_final)
+residy_ppexp_tot <- residuals(m1_ppexp_tot)
+residx_ppexp_tot <- residuals(m2_ppexp_tot)
+
+m1_unemp_all <- lm(cs_mn_avg_ol ~ . - unemp_all, data = data_subset_final)
+m2_unemp_all <- lm(unemp_all ~ . - cs_mn_avg_ol, data = data_subset_final)
+residy_unemp_all <- residuals(m1_unemp_all)
+residx_unemp_all <- residuals(m2_unemp_all)
+
+
+##SES_All model has fewer residuals so we are filling in the difference with NAs to join them into one data frame for simplicity-sake
+#residx_sesall <- c(residx_sesall,rep(NA, 1236))
+#residy_sesall <- c(residy_sesall, rep(NA, 1236))
+
+residual_data_frame <- data.frame(residx_perfrl,residx_baplus_all, residx_sesall, residx_singmom_all, residx_snap_all, residx_corsup, residx_elmgui, residx_inlf_fem, residx_perell, residx_ppexp_tot, residx_unemp_all, residy_perfrl, residy_baplus_all, residy_sesall, residy_singmom_all, residy_snap_all, residy_corsup, residy_elmgui, residy_inlf_fem, residy_perell, residy_ppexp_tot, residy_unemp_all)
+
+#Saving this as a CSV file for future use as well
+#write.csv(residual_data_frame, "shiny_residual_data_frame.csv", row.names =FALSE)
+
+```
+
+```{r, message = FALSE, echo = FALSE, warning = FALSE}
+library(shiny)
+library(vroom)
+library(tidyverse)
+#install.packages("devtools")
+mydata <- read.csv("shiny_data_subset_final.csv")
+residual_data <- read.csv("shiny_residual_data_frame.csv")
+```
+
+
+# Shiny App
+
+In order to easily visualize these relationships all in one place. We've produced a simple Shiny App that produces visualizations between the univariate relationship between our identified important covariates of interest and the primary achievement score outcome. We can see that the residualized outputs match the coefficients in the full adjusted model contained below the Shiny app and highlighted above.
+
+```{r eruptions, echo=FALSE}
+##Saving these for variable labels in the plot
+inputNames <- c("Percent Free Lunch" = "perfrl","Percent of Adults in District with Bachelor's Degree" = "baplus_all","District Average Socioeconomic Status" = "sesall","Percent of District Households with Single Mother" = "singmom_all","Percent of Households Receiving SNAP Benefits" = "snap_all","Number of Instructional Coordinators and Supervisors" = "corsup","Number of Elementary Guidance Counselors" = "elmgui","Percent of 25-64 Year Old Females in the Labor Force" = "inlf_fem","Percent of all Students in the District that are English Language Learners (ELL)" = "perell","Total per Pupil Expnditures (dollars)" = "ppexp_tot","Percent Unemployed in the District" = "unemp_all")
+
+
+ui <- fluidPage(
+  #Header/Title
+  headerPanel(
+    "District Achievement Score by Relevant Adjustable Covariates"),
+  sidebarPanel(
+    #Side input buttons and description
+  selectInput(inputId = "variable_name", label = "Select independent variable",
+              choices = c("Percent Free Lunch" = "perfrl","Percent of Adults in District with Bachelor's Degree" = "baplus_all","District Average Socioeconomic Status" = "sesall","Percent of District Households with Single Mother" = "singmom_all","Percent of Households Receiving SNAP Benefits" = "snap_all","Number of Instructional Coordinators and Supervisors" = "corsup","Number of Elementary Guidance Counselors" = "elmgui","Percent of 25-64 Year Old Females in the Labor Force" = "inlf_fem","Percent of all Students in the District that are English Language Learners (ELL)" = "perell","Total per Pupil Expnditures (dollars)" = "ppexp_tot","Percent Unemployed in the District" = "unemp_all"), selected = NULL, multiple = FALSE),
+  
+  checkboxInput(inputId = "adjust", label = "Adjust for covariates and plot residuals",FALSE),
+  #Description
+  "Select the Covariate you would like to plot against District Average Achievement Score. Note: When adjusting for covariates, the x and y axes are actually the residuals of district average achievement score and the indpendent variable, but the linear relationship is equivalent to the adjusted relationship in our regression output below."),
+  mainPanel(
+    #Put the output in the main panel
+  plotOutput(outputId = "Shiny_Plot")
+  )
+)
+
+server <- function(input, output){
+  #Make the data source reactive to whether or not we're doing an adjusted visualization or not
+  plot_data <- reactive({
+    if(input$adjust == FALSE){
+      mydata <- read.csv("shiny_data_subset_final.csv")
+      return(mydata)
+    }
+    
+    if(input$adjust == TRUE){
+      residual_data <- read.csv("shiny_residual_data_frame.csv")
+      return(residual_data)
+    }
+  })
+  #Make an x-variable that's reactive to the input parameter selected 
+  xvar <- reactive({
+    if(input$adjust == FALSE){
+      if ("perfrl" %in% input$variable_name) return(mydata$perfrl)
+      if ("baplus_all" %in% input$variable_name) return(mydata$baplus_all)
+      if ("sesall" %in% input$variable_name) return(mydata$sesall)
+      if ("singmom_all" %in% input$variable_name) return(mydata$singmom_all)
+      if ("snap_all" %in% input$variable_name) return(mydata$snap_all)
+      if ("corsup" %in% input$variable_name) return(mydata$corsup)
+      if ("elmgui" %in% input$variable_name) return(mydata$elmgui)
+      if ("inlf_fem" %in% input$variable_name) return(mydata$inlf_fem)
+      if ("perell" %in% input$variable_name) return(mydata$perell)
+      if ("ppexp_tot" %in% input$variable_name) return(mydata$ppexp_tot)
+      if ("unemp_all" %in% input$variable_name) return(mydata$unemp_all)
+    }
+    if(input$adjust == TRUE){
+      if ("perfrl" %in% input$variable_name) return(residual_data$residx_perfrl)
+      if ("baplus_all" %in% input$variable_name) return(residual_data$residx_baplus_all)
+      if ("sesall" %in% input$variable_name) return(residual_data$residx_sesall)
+      if ("singmom_all" %in% input$variable_name) return(residual_data$residx_singmom_all)
+      if ("snap_all" %in% input$variable_name) return(residual_data$residx_snap_all)
+      if ("corsup" %in% input$variable_name) return(residual_data$residx_corsup)
+      if ("elmgui" %in% input$variable_name) return(residual_data$residx_elmgui)
+      if ("inlf_fem" %in% input$variable_name) return(residual_data$residx_inlf_fem)
+      if ("perell" %in% input$variable_name) return(residual_data$residx_perell)
+      if ("ppexp_tot" %in% input$variable_name) return(residual_data$residx_ppexp_tot)
+      if ("unemp_all" %in% input$variable_name) return(residual_data$residx_unemp_all)
+      
+
+    }
+  })
+  #Make a y-variable that's reactive to the adjustment and the input parameter
+    yvar <- reactive({
+    if(input$adjust == FALSE){
+      return(mydata$cs_mn_avg_ol)
+    }
+    if(input$adjust == TRUE){
+      if ("perfrl" %in% input$variable_name) return(residual_data$residy_perfrl)
+      if ("baplus_all" %in% input$variable_name) return(residual_data$residy_baplus_all)
+      if ("sesall" %in% input$variable_name) return(residual_data$residy_sesall)
+      if ("singmom_all" %in% input$variable_name) return(residual_data$residy_singmom_all)
+      if ("snap_all" %in% input$variable_name) return(residual_data$residy_snap_all)
+      if ("corsup" %in% input$variable_name) return(residual_data$residy_corsup)
+      if ("elmgui" %in% input$variable_name) return(residual_data$residy_elmgui)
+      if ("inlf_fem" %in% input$variable_name) return(residual_data$residy_inlf_fem)
+      if ("perell" %in% input$variable_name) return(residual_data$residy_perell)
+      if ("ppexp_tot" %in% input$variable_name) return(residual_data$residy_ppexp_tot)
+      if ("unemp_all" %in% input$variable_name) return(residual_data$residy_unemp_all)
+      
+    }
+  })
+    #Tried to condition a reactive label but I don't think this worked properly
+    x_label <- reactive({
+      if (input$adjust == FALSE & "perfrl" %in% input$variable_name){
+        paste("Percent Free Lunch")
+      }
+      if (input$adjust == FALSE & "baplus_all" %in% input$variable_name){
+        paste("Percent of Adults in District with Bachelor's Degree")
+      }
+      if (input$adjust == FALSE & "sesall" %in% input$variable_name){
+        paste("District Average Socioeconomic Status")
+      }
+      if (input$adjust == FALSE & "singmom_all" %in% input$variable_name){
+        paste("Percent of District Households with Single Mother")
+      }
+      if (input$adjust == FALSE & "snap_all" %in% input$variable_name){
+        paste("Percent of Households Receiving SNAP Benefits")
+      }
+      if (input$adjust == FALSE & "corsup" %in% input$variable_name){
+        paste("Number of Instructional Coordinators and Supervisors")
+      }
+      if (input$adjust == FALSE & "elmgui" %in% input$variable_name){
+        paste("Number of Elementary Guidance Counselors")
+      }
+      if (input$adjust == FALSE & "inlf_fem" %in% input$variable_name){
+        paste("Percent of 25-64 Year Old Females in the Labor Force")
+      }
+      if (input$adjust == FALSE & "perell" %in% input$variable_name){
+        paste("Percent of all Students in the District that are English Language Learners (ELL)")
+      }
+      if (input$adjust == FALSE & "ppexp_tot" %in% input$variable_name){ paste("Total per Pupil Expnditures (dollars)")
+      }
+      if (input$adjust == FALSE & "unemp_all" %in% input$variable_name){
+        paste("Percent Unemployed in the District")
+      }
+      #Shift to residual variables
+      if (input$adjust == TRUE & "perfrl" %in% input$variable_name){
+        paste("Percent Free Lunch (Residualized)")
+      }
+      if (input$adjust == TRUE & "baplus_all" %in% input$variable_name){
+        paste("Percent of Adults in District with Bachelor's Degree (Residualized)")
+      }
+      if (input$adjust == TRUE & "sesall" %in% input$variable_name){
+        paste("District Average Socioeconomic Status (Residualized)")
+      }
+      if (input$adjust == TRUE & "singmom_all" %in% input$variable_name){
+        paste("Percent of District Households with Single Mother (Residualized)")
+      }
+      if (input$adjust == TRUE & "snap_all" %in% input$variable_name){
+        paste("Percent of Households Receiving SNAP Benefits (Residualized)")
+      }
+      if (input$adjust == TRUE & "corsup" %in% input$variable_name){
+        paste("Number of Instructional Coordinators and Supervisors (Residualized)")
+      }
+      if (input$adjust == TRUE & "elmgui" %in% input$variable_name){
+        paste("Number of Elementary Guidance Counselors (Residualized)")
+      }
+      if (input$adjust == TRUE & "inlf_fem" %in% input$variable_name){
+        paste("Percent of 25-64 Year Old Females in the Labor Force (Residualized)")
+      }
+      if (input$adjust == TRUE & "perell" %in% input$variable_name){
+        paste("Percent of all Students in the District that are English Language Learners (ELL) (Residualized)") 
+      }
+      if (input$adjust == TRUE & "ppexp_tot" %in% input$variable_name){
+        x_label <- "Total per Pupil Expnditures (dollars)"
+      }
+      if (input$adjust == TRUE & "unemp_all" %in% input$variable_name)
+        paste("Percent Unemployed in the District (Residualized)")
+      
+    })
+  
+    y_label <- reactive({
+      if (input$adjust == FALSE){
+        paste("District Average Achievement Score")
+      }
+      
+      if (input$adjust == TRUE){
+        paste("District Average Achievement Score (Residualized)")
+      }
+    })
+
+
+  
+  #Produce the output plot with all of our reactive variables
+  output$Shiny_Plot <- renderPlot({
+    req(plot_data())
+    ggplot(plot_data(),aes(x = xvar(), yvar())) +
+      geom_point(aes( x = xvar(), y = yvar()), size=0.5, alpha = 0.5, color = "blueviolet") + geom_smooth(lwd = 1, lty = 2, color = "black", method  = "lm") +
+      theme_light() +
+      labs(x = names(inputNames[which(inputNames == input$variable_name)]), y = "District Average Achievement Score") +
+      ggtitle(paste("District Average Achievement Score vs.",names(inputNames[which(inputNames == input$variable_name)]))) +
+      theme(plot.title = element_text(size = 16), 
+            axis.title.x = element_text(size = 14),
+            axis.title.y = element_text(size = 14))
+  }) 
+    
+
+}
+
+shinyApp(ui, server)
+```
+
+```{r}
+#Reproviding the linear regression output for comparison
+summary(linear_mod_full)
+```
+
+
