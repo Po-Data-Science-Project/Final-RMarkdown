@@ -2,7 +2,7 @@
 
 ## Guide for Readers
 ### You will need to download separately from GitHub:
-- **[https://stacks.stanford.edu/file/druid:db586ns4974/codebook_covariates_v1_1.xlsx](https://stacks.stanford.edu/file/druid:db586ns4974/codebook_covariates_v1_1.xlsx)** - input data from Stanford Education Data Archive (SEDA)  
+- **[https://stacks.stanford.edu/file/druid:db586ns4974/district%20by%20year%20by%20grade%20covariates%20from%20acs%20and%20ccd%20master_v1_1.dta](https://stacks.stanford.edu/file/druid:db586ns4974/district%20by%20year%20by%20grade%20covariates%20from%20acs%20and%20ccd%20master_v1_1.dta)** - input data from Stanford Education Data Archive (SEDA)  
 
 ---
 
